@@ -48,7 +48,7 @@ but the keyboard**. That last one found two bugs the day it was written. Add
 
 `npm run balance` answers the question that decides whether the score means
 anything: can somebody with no security knowledge reach a high rank? It
-prints sixteen checks and exits non-zero on any of them. Run it after every
+prints seventeen checks and exits non-zero on any of them. Run it after every
 change to the scenarios, the readiness cards, the ranks, the scoring or the
 injects. The reference reports are in `docs/balance/`.
 

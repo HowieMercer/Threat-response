@@ -95,6 +95,39 @@ describe('answer key cannot be solved by stage position', () => {
     }
   });
 
+  it('prices every single-pillar strategy within one defense point of a coin flip', () => {
+    /* The exact version of the check above, and the one worth trusting.
+     *
+     * A lead scores 2 defense points if it was `best`, 1 if `partial` and 0
+     * if `weak`, so the value of "always lead with X" is a property of the
+     * pool that can be computed rather than sampled: it needs no simulation
+     * and it has no variance. A coin flip is worth exactly 1.0 a stage.
+     *
+     * The bound is one defense point per five-stage run, which is 10% of the
+     * cap and under a fifth of what the pool pays for actually knowing the
+     * answer (expert 10, blind about 4.7). It is chosen against that span
+     * rather than against the current numbers, which sit at half of it:
+     * Manage +0.25 a run, Secure +0.50, Recover -0.75.
+     *
+     * scripts/monte-carlo.mjs measures the same thing in Hunter+ percentage
+     * points, where it straddled a threshold because a count of runs
+     * crossing a line responds to variance as well as to the mean. This is
+     * the same claim with the sampling error removed. */
+    const perStage = Object.fromEntries(
+      PILLARS.map((p) => {
+        const pts = allVariants.reduce(
+          (a, v) => a + (v.rank[p] === 'best' ? 2 : v.rank[p] === 'partial' ? 1 : 0), 0
+        );
+        return [p, pts / allVariants.length];
+      })
+    );
+    for (const p of PILLARS) {
+      const perRun = (perStage[p] - 1) * 5;
+      expect(Math.abs(perRun), `always ${p}: ${perRun.toFixed(2)} defense points a run vs a coin flip`)
+        .toBeLessThanOrEqual(1);
+    }
+  });
+
   it('does not teach recovery as a stage-five rescue', () => {
     /* The credibility bug from an early build: Recover correct in every
      * stage-five variant made the climax a free win and taught the exact

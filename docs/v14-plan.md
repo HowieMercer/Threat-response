@@ -306,62 +306,71 @@ so every figure here can be checked against the file it came from. The v13
 column needed three one-line shims to read `revealed.weak` instead of
 `revealed.partial`; nothing else about the harness differs between them.
 
+Two units appear below. **Defense points** (0–10) are what the rank ladder
+reads and they do not amplify variance. **Hunter+** is the share of runs
+reaching Threat Hunter or better, which is a count of runs crossing a line,
+so it responds to variance as well as to the mean. Where a claim is about
+expected value, the defense-point figure is the one to read.
+
+### The three exploits
+
 | | v13 | v14 |
 |---|---|---|
-| blind reaches Threat Hunter | 20.8% | **36.8%** (band 35–45) |
-| longest-act heuristic vs blind | **+79.2** | −3.5 |
-| most-commas heuristic vs blind | **+51.4** | +1.6 |
-| scan's worth to a knowledge-free player | **+1.79 defense points** | −0.03 |
-| the same, on the rank ladder | **+29.2** | −0.1 |
-| knowledge worth (semi-informed vs blind) | +17.0 | **+20.9** |
-| best single pillar vs blind | +6.0 | +9.4 |
-| strongest two-card build, Champion | 0.8% | 1.0% |
+| "pick the longest action" vs blind | **+79.8** Hunter+ | −5.1 |
+| "pick the one with a comma" vs blind | **+52.7** Hunter+ | +0.5 |
+| press S, then guess | **+1.77 defense points** (+30.0 Hunter+) | −0.08 (−0.9) |
+
+The scan row is the sharpest number in the comparison. +1.77 defense points
+out of 10 is an 18% swing on the metric the rank ladder reads, bought by
+pressing one button with no security knowledge at all.
+
+### The rest
+
+| | v13 | v14 |
+|---|---|---|
+| blind reaches Threat Hunter | 20.2% | **37.7%** (band 35–45) |
+| blind defense points | 4.7 | 4.7 |
+| best single pillar, defense points over blind | +0.54 | +0.53 |
+| best single pillar, Hunter+ over blind | +6.4 | +8.3 |
+| semi-informed, defense points over blind | +1.0 | +1.0 |
+| semi-informed, Hunter+ over blind | +17.6 | **+20.3** |
+| strongest two-card build, Champion | 0.8% | 0.8% |
 | readiness cards that are live choices | 3 of 6 | **6 of 6** |
-| harness checks passing | 9 of 16 | **16 of 16** |
+| harness checks passing | 11 of 17 | **17 of 17** |
 | colour literals outside tokens.css | 128 | **0** |
 | built file | 222,273 B | 241,676 B (+8.7%) |
 
-Four of those need a note.
+Read the defense-point rows and the pool is almost unchanged: blind play is
+worth 4.7 points in both versions, the best single pillar is worth +0.53 over
+it in both, and a semi-informed player is worth +1.0 over it in both. **That
+is the honest statement of what happened to the answer key: the exploits
+went, and nothing else about the pool's difficulty moved.**
 
-**Blind play moved from 20.8% to 36.8% without the answer key getting
-easier.** It moved because the Threat Hunter line sits at 6 defense points
-rather than 7, and where that line sits is what decides the number — the
-lever table is in both reports. What protects the score from a
-knowledge-free player is the pool, and that is the row two below: knowledge
-is worth +20.9 points now, against +17.0 when three separate heuristics
-could beat it outright.
+What moved is where the Threat Hunter line sits — 6 defense points rather
+than 7 — and that is why blind play goes from 20.2% to 37.7%, into the 35–45%
+band the brief asked for. It is also why the same +1.0 defense points that
+knowledge buys converts into 20.3 points of Hunter+ rather than 17.6: the
+defense-point distribution is densest between 4 and 6, so a line at 6 sits
+where an advantage actually shows. The ladder is a more sensitive instrument
+now, reading the same pool.
 
-**The scan row is measured in expected defense points, not in Hunter+, and
-that is deliberate.** Hunter+ is a threshold count, so it responds to
-variance as well as to the mean: taking the partial layer every time scores
-a flat 5 points a run and therefore never crosses a line drawn at 6, while a
-blind flip with the identical mean sometimes does. That strategy sits about
-five points of Hunter+ below blind for that reason alone, permanently, and
-an earlier two-sided check on Hunter+ read the arithmetic being right as the
-arithmetic being broken. The claim is about expected value, so the
-measurement is too. The exploit direction is still checked on the ladder,
-one-sided, because that is the number a rank actually reads.
-
-**+1.79 defense points out of 10** is what v13's scan was worth to someone
-who pressed S and then guessed. That is an 18% swing on the metric the rank
-ladder reads, from no knowledge at all, and it is the clearest single number
-in this comparison.
-
-**The single-pillar figure went up, +6.0 to +9.4**, which looks like a
-regression and is not one. The lead-pick quality table in both reports shows
-"always Secure" picking identically in the two versions — 35.1 / 39.7 / 25.2
-in v13 against 34.3 / 40.7 / 25.0 in v14 — so the pool did not change for
-it. What changed is the sensitivity of the metric: the defense-point
-distribution is densest between 4 and 6, so a given advantage moves more
-mass across a line at 6 than across a line at 7. The same strategy, the same
-pool, a more sensitive ruler.
+The same effect explains the single-pillar row, which is the one that looks
+like a regression and is not: +6.4 → +8.3 Hunter+ on an unchanged +0.53
+defense points. Both reports show "always Secure" scoring 5.2 defense points
+and picking 34.6 / 40.7 / 24.8 in v13 against 34.9 / 40.2 / 24.8 in v14 — the
+same strategy, the same pool, a more sensitive ruler. It is also why the
+check on it is measured in defense points now, with the ladder reading kept
+one-sided beside it; the Hunter+ version straddled its threshold across
+repeated runs at +7.8 to +10.5 while the pool never moved at all.
 
 The underlying pool property is worth naming though, because it is the one
 thing in the answer key I would still want a second opinion on: **Secure is
-the weakest layer in only a quarter of the pool** rather than a third, so
-"always lead with detection" avoids the pick that breaches more often than
-chance. It is inside every bound the tests enforce (no pillar is `best` in
-more than 45% or less than 20% of the pool, and none is `weak` in all four
-variants of a stage) and it is arguably true to life. But it is the reason
-one pillar beats blind by nine points, and if a future content pass adds
+the weakest layer in only 5 of the 20 variants** rather than the 6.7 a flat
+pool would give, so "always lead with detection" avoids the pick that
+breaches more often than chance. Computed exactly rather than sampled, that
+is worth +0.50 defense points a run against a coin flip — Manage is +0.25,
+Recover is −0.75 — and `tests/integrity.test.js` now bounds all three at one
+point per run, a fifth of what the pool pays for actually knowing the answer.
+It is inside every bound, and it is arguably true to life. But it is the
+reason one pillar reads +8.3 on the ladder, and if a future content pass adds
 variants it is the number to watch.

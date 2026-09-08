@@ -320,12 +320,16 @@ console.log(`\nThreat Response — Monte Carlo answer-key report`);
 console.log(`${(per * STRATEGIES.length).toLocaleString()} runs total, ${per.toLocaleString()} per strategy`);
 console.log(`Timed mode, simulated read time ${(READ_MS / 1000).toFixed(1)}s +/- ${(READ_SPREAD / 1000).toFixed(1)}s\n`);
 
-console.log(pad('strategy', 24), 'Hunter+', ' Champ', 'contained', ' index', ' closed', 'no-answer');
-console.log('-'.repeat(84));
+console.log(pad('strategy', 24), 'Hunter+', ' Champ', ' def', 'contained', ' index', ' closed', 'no-answer');
+console.log('-'.repeat(90));
 for (const r of rows) {
   console.log(
     pad(r.name, 24), num(r.hunter, 6) + '%', num(r.champ, 5) + '%',
-    num(r.contained, 8, 2) + '/5', num(r.index, 6), num(r.closed, 6) + '%', num(r.unanswered, 8) + '%'
+    /* Mean defense points out of 10. Printed because half the checks below
+     * are measured on it: it is what the rank ladder reads, and unlike
+     * Hunter+ it does not amplify variance. */
+    num(r.defense, 4, 1), num(r.contained, 8, 2) + '/5', num(r.index, 6),
+    num(r.closed, 6) + '%', num(r.unanswered, 8) + '%'
   );
 }
 
@@ -416,21 +420,44 @@ const checks = [
   ['blind Champion stays rare (under 5%)', blind.champ < 5, `${blind.champ.toFixed(2)}%`],
   ['expert play reaches Champion reliably', byName['expert — perfect stack'].champ > 90,
    `${byName['expert — perfect stack'].champ.toFixed(1)}%`],
-  ['no single pillar beats blind by more than 10 points',
-   Math.max(...singles.map((r) => r.hunter)) - blind.hunter < 10,
-   `+${(Math.max(...singles.map((r) => r.hunter)) - blind.hunter).toFixed(1)}`],
+  /* Single-pillar play, on expected points for the same reason the scan
+   * checks below are: Hunter+ counts runs crossing a line at 6 defense
+   * points, so it amplifies a small change in the mean and carries about
+   * +/-1.7 points of sampling error at this sample size. This check
+   * straddled a 10-point threshold across repeated runs, +7.8 to +10.5,
+   * while the underlying pool never moved at all.
+   *
+   * The exact, variance-free version of the claim is a unit test now, in
+   * tests/integrity.test.js, computed straight from the ranks: always
+   * Manage is worth +0.25 defense points a run against a coin flip, always
+   * Secure +0.50, always Recover -0.75, against a bound of 1. What is left
+   * here is the same thing sampled, plus the ladder reading one-sided at
+   * 14 — about two standard deviations above the measured spread, so it
+   * catches a real break rather than a sample. */
+  /* One-sided, and that is what the claim is. A pillar worth LESS than a
+   * coin flip is not dominance — Recover is deliberately a poor default,
+   * because "recovery is not a stage-five rescue" is one of the three
+   * arguments the mechanics have to carry, and it measures at about -1
+   * defense point a run. Both directions are bounded exactly, on the pool
+   * rather than on a sample, by the integrity test named above. */
+  ['no single pillar gains a defense point over blind',
+   Math.max(...singles.map((r) => r.defense - blind.defense)) < 1,
+   singles.map((r) => `${r.name.replace('always ', '')[0]}${sign(r.defense - blind.defense, 2)}`).join(' ')],
+  ['no single pillar runs away with the rank ladder',
+   Math.max(...singles.map((r) => r.hunter)) - blind.hunter < 14,
+   sign(Math.max(...singles.map((r) => r.hunter)) - blind.hunter)],
   ['positional heuristic beats blind by under 10 points',
    byName['positional heuristic'].hunter - blind.hunter < 10,
-   `+${(byName['positional heuristic'].hunter - blind.hunter).toFixed(1)}`],
+   sign(byName['positional heuristic'].hunter - blind.hunter)],
   ['LONGEST-ACT heuristic beats blind by under 10 points',
    byName['longest act string'].hunter - blind.hunter < 10,
-   `+${(byName['longest act string'].hunter - blind.hunter).toFixed(1)}`],
+   sign(byName['longest act string'].hunter - blind.hunter)],
   ['SHORTEST-ACT heuristic beats blind by under 10 points',
    byName['shortest act string'].hunter - blind.hunter < 10,
-   `+${(byName['shortest act string'].hunter - blind.hunter).toFixed(1)}`],
+   sign(byName['shortest act string'].hunter - blind.hunter)],
   ['MOST-COMMAS heuristic beats blind by under 10 points',
    byName['most commas in act'].hunter - blind.hunter < 10,
-   `+${(byName['most commas in act'].hunter - blind.hunter).toFixed(1)}`],
+   sign(byName['most commas in act'].hunter - blind.hunter)],
   /* The scan must be worth nothing to a player who cannot reason about the
    * technique, in both directions: ruling the partial out and taking it are
    * both worth exactly 1.0 defense points a stage, the same as a blind flip.
