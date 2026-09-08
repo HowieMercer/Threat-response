@@ -1,0 +1,101 @@
+
+Threat Response — Monte Carlo answer-key report
+39,988 runs total, 3,076 per strategy
+Timed mode, simulated read time 3.4s +/- 1.3s
+
+strategy                 Hunter+  Champ contained  index  closed no-answer
+------------------------------------------------------------------------------------
+blind — uniform random     38.5%   0.5%     1.67/5   40.8   39.7%      0.0%
+always Manage              45.2%   0.5%     1.76/5   46.3   31.6%      0.0%
+always Secure              46.3%   0.2%     1.73/5   43.7   33.8%      0.0%
+always Recover             24.8%   0.2%     1.51/5   32.3   55.9%      0.0%
+positional heuristic       28.7%   0.6%     1.74/5   33.4   57.5%      0.0%
+longest act string         32.3%   0.2%     1.50/5   39.0   41.0%      0.0%
+shortest act string        31.4%   0.0%     1.26/5   45.4   19.1%      0.0%
+most commas in act         38.5%   0.2%     1.65/5   40.7   38.9%      0.0%
+naive reader               38.0%   0.8%     1.83/5   39.5   42.3%      0.0%
+scan then guess            36.1%   1.2%     2.15/5   37.7   48.2%      0.0%
+scan then take it          32.6%   0.0%     0.67/5   43.6   36.4%      0.0%
+semi-informed + scan       56.9%   1.3%     2.32/5   48.0   30.9%      0.0%
+expert — perfect stack    100.0% 100.0%     5.00/5  100.0    0.0%      0.0%
+
+lead-pick quality — a strategy that knows nothing should sit at 33/33/33
+------------------------------------------------------------------------------------
+blind — uniform random   best  33.4% partial  34.2% weak  32.4%
+always Manage            best  35.2% partial  34.4% weak  30.4%
+always Secure            best  34.7% partial  40.0% weak  25.3%
+always Recover           best  30.3% partial  24.8% weak  44.9%
+positional heuristic     best  34.7% partial  20.2% weak  45.0%
+longest act string       best  29.9% partial  35.0% weak  35.1%
+shortest act string      best  25.3% partial  45.5% weak  29.3%
+most commas in act       best  33.0% partial  33.6% weak  33.5%
+naive reader             best  36.5% partial  26.4% weak  37.1%
+scan then guess          best  43.0% partial  13.7% weak  43.3%
+scan then take it        best  13.3% partial  73.5% weak  13.2%
+semi-informed + scan     best  46.4% partial  26.6% weak  27.0%
+expert — perfect stack   best 100.0% partial   0.0% weak   0.0%
+
+blind play: correctness spread — lumpy means deducible
+------------------------------------------------------------------------------------
+  by pillar chosen   manage  34.5%   secure  35.1%   recover  30.5%
+  by stage position  s1  33.3%  s2  33.2%  s3  33.1%  s4  33.9%  s5  33.3%
+
+blind play: rank distribution
+------------------------------------------------------------------------------------
+  Resilience Champion      0.5%
+  Threat Hunter           37.9%
+  First Responder         44.5%
+  Breach Survivor         14.6%
+  The Phoenix              2.5%
+
+where the Threat Hunter line lands blind play (currently 6)
+------------------------------------------------------------------------------------
+  defense pts  t>=4      t>=5      t>=6      t>=7      t>=8
+  blind at+     70.6%     56.2%     38.5%     21.9%      8.6%
+
+readiness cards — marginal value, 1,025 runs each, knows no security
+------------------------------------------------------------------------------------
+  baseline, no cards       index  41.5  defense 4.75  lost 1.12  estate  8.56/12  closed  37.4%
+  auto-isolate     secure  index  48.2 (+6.8  )  defense 5.73 (+0.98 )  lost 0.84 (-0.28 )  estate +0.49   closed  29.9% (-7.5)
+  patch-cadence    manage  index  41.2 (-0.3  )  defense 4.98 (+0.24 )  lost 0.46 (-0.66 )  estate +0.85   closed  38.0% (+0.6)
+  soc-watch        secure  index  41.1 (-0.4  )  defense 4.73 (-0.02 )  lost 1.12 (+0.00 )  estate -0.00   closed  40.0% (+2.6)
+  asset-inventory  manage  index  40.5 (-1.0  )  defense 4.70 (-0.04 )  lost 1.02 (-0.10 )  estate +1.01   closed  38.8% (+1.5)
+  immutable-vault  recover index  40.4 (-1.1  )  defense 4.69 (-0.06 )  lost 0.95 (-0.16 )  estate +0.12   closed   0.0% (-37.4)
+  restore-drill    recover index  40.3 (-1.2  )  defense 4.91 (+0.17 )  lost 0.53 (-0.59 )  estate +2.16   closed  38.0% (+0.7)
+
+readiness cards — the same board, semi-informed player
+------------------------------------------------------------------------------------
+  baseline, no cards       index  48.5  defense 5.78  lost 0.97  estate  9.02/12  closed  26.7%
+  soc-watch        secure  index +23.2    defense +3.26    lost -0.65    estate +2.03    closed -18.3    knowledge-gated
+  auto-isolate     secure  index +6.3     defense +0.87    lost -0.33    estate +0.43    closed -6.3     
+  patch-cadence    manage  index +5.4     defense +1.24    lost -0.78    estate +1.22    closed -14.6    
+  asset-inventory  manage  index -0.3     defense +0.05    lost -0.10    estate +0.98    closed +1.7     
+  immutable-vault  recover index -0.4     defense +0.05    lost -0.15    estate +0.17    closed -26.7    
+  restore-drill    recover index -1.8     defense +0.04    lost -0.42    estate +1.69    closed +3.9     
+
+readiness pairs — the strongest legal two-card builds
+------------------------------------------------------------------------------------
+  asset-inventory + auto-isolate          Hunter+  62.5%  Champ   0.4%  index  49.1
+  auto-isolate + immutable-vault          Hunter+  61.1%  Champ   0.0%  index  47.9
+  patch-cadence + auto-isolate            Hunter+  60.0%  Champ   0.0%  index  47.7
+  soc-watch + auto-isolate                Hunter+  56.8%  Champ   1.2%  index  49.0
+  auto-isolate + restore-drill            Hunter+  55.1%  Champ   0.0%  index  47.1
+
+checks
+------------------------------------------------------------------------------------
+  pass  blind play reaches Threat Hunter in the 35-45% band            38.5%
+  pass  blind Champion stays rare (under 5%)                           0.52%
+  pass  expert play reaches Champion reliably                          100.0%
+  pass  no single pillar beats blind by more than 10 points            +7.8
+  pass  positional heuristic beats blind by under 10 points            +-9.8
+  pass  LONGEST-ACT heuristic beats blind by under 10 points           +-6.1
+  pass  SHORTEST-ACT heuristic beats blind by under 10 points          +-7.0
+  pass  MOST-COMMAS heuristic beats blind by under 10 points           +0.1
+  pass  scan gains a knowledge-free player nothing (ruling the partial out) -2.4 vs blind
+  pass  scan gains a knowledge-free player nothing (taking the partial) -5.9 vs blind
+  pass  every rank reached by some strategy in this report             all
+  pass  every readiness card is a live choice for one of the two players all live
+  pass  no two-card build solves the run (Champion under 25%)          worst 1.2%
+  pass  all three pillars correct at some stage position               
+  pass  a reading player is not timed out of stages                    0.0%
+

@@ -3,6 +3,13 @@
 Written after Phase 0, before any code changed. Baseline screenshots for
 comparison are in `docs/shots/v13-baseline/`.
 
+> **Status: Tier 1 shipped.** What actually landed, and where it diverged
+> from this plan, is recorded at the bottom under
+> [What shipped](#what-shipped). The measurements this plan is built on are
+> in `docs/balance/monte-carlo-v13.txt`; the same harness against the
+> shipped build is `docs/balance/monte-carlo-v14.txt`. Nothing in this file
+> above that section has been edited after the fact.
+
 ## Corrections to the brief
 
 Three things in the v14 brief do not match the repo. Flagging them because
@@ -226,3 +233,116 @@ Root causes, separately:
 - **Merging the v9-phone branch.** It is not in this repo and the v13
   harness reports the mobile debt closed. Listed as a follow-up; I would
   need the branch to say anything true about it.
+
+## What shipped
+
+Appended after Tier 1 landed. Everything here is checkable: the Monte Carlo
+reports are in `docs/balance/`, the screenshots in `docs/shots/v14/` and
+`docs/shots/v14-dark/`, and `npm test && npm run balance && npm run
+contrast && npm run verify` reproduces all of it.
+
+### Tier 1, item by item
+
+| # | item | outcome |
+|---|---|---|
+| 1 | tokens.css as a real layer | done — 128 bypasses → 0, two annotated `/* token-fallback */` restatements left in the QR encoder for the Node case |
+| 2 | light default, dark behind `data-theme` | done — both themes shot at four widths from one stylesheet |
+| 3 | light signal set ≥4.5:1 | done — worst text pair 4.81:1 light, 4.91:1 dark |
+| 4 | contrast audit failing the build | done — 574 pairs across 4 scopes × 6 stage states |
+| 5 | escalation without luminance | done — surface drift plus a separate `--stage-tint` layer |
+| 6 | scanlines out, vignette and particles re-cut | done — particle count sized by a measured 6ms frame budget |
+| 7 | the climax inverts to `#140628` | done — `lights-out` clip-path wipe, suppressed under reduced motion |
+| 8 | result screen re-cut, dial strongest visual | done — dial is a banded instrument, gap promoted above the rank |
+| 9 | rewrite all 60 `act` strings | done — longest-action heuristic 85% → 30%, and the regression test checks both length extremes rather than just the top one |
+| 10 | rebalance the readiness board | done, but **not as planned** — see below |
+| 11 | injects never fire into a pending pick, never steal focus | done — and found the reason no inject had ever rendered in a browser |
+| 12 | seed entry and a copyable run link | done |
+| 13 | gap promoted above the rank | done |
+| 14 | `act` copy pass | done, folded into 9 |
+| 15 | 40,000-run Monte Carlo, before/after | done — `docs/balance/` |
+| 16 | shots, offline, reduced motion, keyboard-only, size | done — and the keyboard run found two real bugs |
+
+### Where it diverged
+
+**Item 10 took three passes rather than one, and the plan's prescription
+was wrong.** The plan proposed making `asset-inventory` discount a scan's
+ground cost and leaving the scan itself alone. Measuring that found the
+larger problem: the scan revealed the *weakest* layer, which eliminates
+the only pick that breaches and is therefore worth 1.5 defense points a
+stage against 1.0 for a coin flip — Threat Hunter 74% of the time for a
+player who knows no security and pressed one button. Revealing the
+*partial* layer instead is worth exactly nothing to that player and a
+great deal to one who can reason about the technique. That is the change
+the plan should have called for.
+
+The second thing measurement contradicted: **ground is nearly inert.** A
+player who decides in four seconds on a thirteen-second clock is never
+timed out, so intrusion depth moves speed points and nothing that touches
+the rank. Three of six readiness cards bought ground, which is why they
+all measured under +0.5 index — including the two the plan proposed
+fixing by giving them *more* ground. Each card now acts where the
+consequence lands, on a different failure mode from the others.
+
+**Two more things the plan asserted and Phase 0 got wrong.** "375px,
+reduced motion, offline, tap targets: all clean — the older
+`min-width:auto` flex bug is closed" was true only of the check that
+existed. The page-level overflow check cannot see content clipped inside
+a panel with `overflow: hidden`, and the sentence booth staff read out
+loud was truncated mid-word at 375px. And "the whole game completable
+without a mouse" was in the quality floor, unmeasured, and false: a
+keyboard player could not buy a readiness card.
+
+### Tier 2, still not built
+
+Unchanged from the list above. Nothing moved up; the audio re-cut is now
+worth revisiting because the visual work has landed and can be heard
+against.
+
+### Numbers
+
+Both columns are the same harness at 40,000 runs, quoted from
+`docs/balance/monte-carlo-v13.txt` and `docs/balance/monte-carlo-v14.txt`
+so every figure here can be checked against the file it came from. The v13
+column needed three one-line shims to run against v13's API, listed at the
+top of that file's commit.
+
+| | v13 | v14 |
+|---|---|---|
+| blind reaches Threat Hunter | 21.2% | **38.5%** (band 35–45) |
+| longest-act heuristic vs blind | **+78.8** | −6.1 |
+| most-commas heuristic vs blind | **+52.3** | +0.1 |
+| scan-and-guess vs blind | **+28.1** | −2.4 |
+| knowledge worth (semi-informed vs blind) | +16.9 | **+18.4** |
+| best single pillar vs blind | +4.7 | +7.8 |
+| strongest two-card build, Champion | 0.8% | 1.2% |
+| readiness cards that are live choices | 3 of 6 | **6 of 6** |
+| harness checks passing | 9 of 15 | **15 of 15** |
+| colour literals outside tokens.css | 128 | **0** |
+| built file | 222,273 B | 241,676 B (+8.7%) |
+
+Two of those deserve a note. **Blind play moved from 21.2% to 38.5%
+without the answer key getting easier** — it moved because the Threat
+Hunter line sits at 6 defense points rather than 7, and where that line
+sits is what decides the number (the lever table is in both reports).
+What protects the score from a knowledge-free player is the pool, and
+that is the row underneath: knowledge is worth +18.4 points now, against
++16.9 when three separate heuristics could beat it outright.
+
+And **the single-pillar figure went up, +4.7 to +7.8**, which looks like a
+regression and is not one. The lead-pick quality table in both reports
+shows "always Secure" picking identically in the two versions — 34.5 /
+40.4 / 25.1 in v13 against 34.7 / 40.0 / 25.3 in v14 — so the pool did
+not change for it. What changed is the sensitivity of the metric: the
+defense-point distribution is densest between 4 and 6, so a given
+advantage moves more mass across a line at 6 than across a line at 7. The
+same strategy, the same pool, a more sensitive ruler.
+
+The underlying pool property is worth naming though, because it is the
+one thing in the answer key I would still want a second opinion on:
+**Secure is the weakest layer in only a quarter of the pool** rather than
+a third, so "always lead with detection" avoids the pick that breaches
+more often than chance. It is inside every bound the tests enforce (no
+pillar is `best` in more than 45% or less than 20% of the pool, and none
+is `weak` in all four variants of a stage) and it is arguably true to
+life. But it is the reason one pillar beats blind by nearly eight points,
+and if a future content pass adds variants it is the number to watch.

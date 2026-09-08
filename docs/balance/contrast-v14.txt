@@ -1,0 +1,11 @@
+Threat Response — contrast audit
+
+  light      246 pairs / 6 stage states  worst text 4.81:1 (min 4.5)  worst non-text 3.95:1 (min 3.0)  0 failing
+  dark       246 pairs / 6 stage states  worst text 4.91:1 (min 4.5)  worst non-text 4.09:1 (min 3.0)  0 failing
+  ink-light   41 pairs / 1 state  worst text 5.12:1 (min 4.5)  worst non-text 4.75:1 (min 3.0)  0 failing
+  ink-dark    41 pairs / 1 state  worst text 5.12:1 (min 4.5)  worst non-text 4.75:1 (min 3.0)  0 failing
+
+  token discipline: 0 colour literal(s) outside tokens.css
+  subtree scopes:   0 token(s) set as a triple but not resolved
+
+OK
