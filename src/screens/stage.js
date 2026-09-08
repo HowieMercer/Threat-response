@@ -19,6 +19,7 @@ import { rightBackupFor } from '../engine/resolve.js';
 import { OUTCOME_LABEL } from '../engine/scoring.js';
 import { SCAN_COST, HOLD_COST, CAPACITY_MAX, PHASE } from '../engine/game.js';
 import { shake, flash, vignette, burst, deltaChips, type } from '../render/fx.js';
+import { Escalation } from '../render/theme.js';
 
 export function createStageScreen(app) {
   const { game, data } = app;
@@ -268,6 +269,10 @@ export function createStageScreen(app) {
     closeInject();
     const s = game.state;
     const v = s.variant;
+
+    /* The surface drift. Everything visual about escalation on a light
+     * ground hangs off this one attribute — see tokens.css. */
+    Escalation.set(s.stageIndex);
 
     hud.setStage(s.stageIndex, s.rounds, v.threat);
     threatChip.textContent = v.threat.toUpperCase();

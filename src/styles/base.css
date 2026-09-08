@@ -45,37 +45,86 @@ canvas#bg {
   display: block;
 }
 
+/* The vignette.
+ *
+ * On the dark theme this was a darkening at the edges. Reproduced on
+ * near-white it looks like a print defect — a photocopy with a dirty
+ * platen — so on light it does the opposite: the resting state is a barely
+ * perceptible cool lift, and the alert states tint INWARD with the
+ * light-mode red rather than darkening. Both are one token deep, so the
+ * dark theme keeps its original behaviour without a second rule. */
 .vignette {
   position: fixed;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: radial-gradient(120% 100% at 50% 0%, transparent 55%, rgba(0, 0, 0, 0.6) 100%);
-  transition: box-shadow 0.45s var(--ease);
+  background: radial-gradient(
+    128% 108% at 50% -8%,
+    rgb(var(--panel-rgb) / 55%) 0%,
+    rgb(var(--bg-rgb) / 0%) 46%,
+    rgb(var(--bg2-rgb) / 60%) 100%
+  );
+  transition: box-shadow 0.45s var(--ease), background 0.9s var(--ease);
+}
+/* The per-stage wash. Separate layer from .alert/.crit so the two signals
+   compose: the stage says how deep into the attack you are, the alert
+   states say how close the attacker is right now. */
+.vignette::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 var(--stage-tint-size) calc(var(--stage-tint-size) / 5) var(--stage-tint);
+  transition: box-shadow 0.9s var(--ease);
+}
+:root[data-theme='dark'] .vignette {
+  background: radial-gradient(120% 100% at 50% 0%, rgb(var(--shade-rgb) / 0%) 55%, rgb(var(--shade-rgb) / 60%) 100%);
 }
 .vignette.alert {
-  box-shadow: inset 0 0 220px 40px rgba(255, 77, 103, 0.28);
+  box-shadow: inset 0 0 200px 30px rgb(var(--red-rgb) / 13%);
 }
 .vignette.crit {
-  box-shadow: inset 0 0 260px 60px rgba(255, 77, 103, 0.5);
+  box-shadow: inset 0 0 240px 56px rgb(var(--red-rgb) / 22%);
 }
 .vignette.won {
-  box-shadow: inset 0 0 240px 50px rgba(51, 230, 174, 0.24);
+  box-shadow: inset 0 0 220px 44px rgb(var(--green-rgb) / 15%);
+}
+:root[data-theme='dark'] .vignette.alert {
+  box-shadow: inset 0 0 220px 40px rgb(var(--red-glow-rgb) / 28%);
+}
+:root[data-theme='dark'] .vignette.crit {
+  box-shadow: inset 0 0 260px 60px rgb(var(--red-glow-rgb) / 50%);
+}
+:root[data-theme='dark'] .vignette.won {
+  box-shadow: inset 0 0 240px 50px rgb(var(--green-glow-rgb) / 24%);
 }
 
+/* Texture.
+ *
+ * A 1px scanline over near-white is grime, not instrumentation — it reads
+ * as a dirty screen and it moires against the type. Replaced with a fine
+ * dot grid at very low alpha, which says "measured surface" on a light
+ * ground the way scanlines said "CRT" on a dark one. The dark theme keeps
+ * the scanlines, because there they were paying for themselves. */
 .scan {
   position: fixed;
   inset: 0;
   z-index: 2;
   pointer-events: none;
+  opacity: 0.55;
+  background-image: radial-gradient(rgb(var(--ink-rgb) / 8%) 0.5px, transparent 0.5px);
+  background-size: 12px 12px;
+  background-position: -1px -1px;
+}
+:root[data-theme='dark'] .scan {
   opacity: 0.5;
-  background: repeating-linear-gradient(
+  background-image: repeating-linear-gradient(
     0deg,
-    rgba(255, 255, 255, 0.025) 0,
-    rgba(255, 255, 255, 0.025) 1px,
+    rgb(var(--lift-rgb) / 2.5%) 0,
+    rgb(var(--lift-rgb) / 2.5%) 1px,
     transparent 2px,
     transparent 4px
   );
+  background-size: auto;
   mix-blend-mode: overlay;
 }
 
@@ -94,7 +143,7 @@ canvas#bg {
   background: var(--green);
 }
 .flash.violet {
-  background: var(--brand);
+  background: var(--brand-glow);
 }
 @keyframes flash {
   0% { opacity: 0.5; }
@@ -166,12 +215,64 @@ h1, h2, h3, h4 {
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--faint);
+  /* --dim, not --faint. Both clear 4.5:1, but a 10px letter-spaced cap at
+     4.6:1 on near-white reads as a whisper and these are the labels that
+     name what the player is looking at. --faint stays for genuinely
+     tertiary metadata. */
+  color: var(--dim);
 }
 .dim { color: var(--dim); }
 .faint { color: var(--faint); }
 
 /* -------------------------------------------------------------- atoms */
+
+/* Elevation.
+ *
+ * On the dark theme a card was identified by its border: a hairline against
+ * near-black is a strong edge. On near-white the same hairline is almost
+ * nothing, and the result was a screen full of white rectangles that read as
+ * one flat sheet — lighter, but also softer, which was the one thing this
+ * re-theme was not allowed to be.
+ *
+ * So on light, elevation carries it. `--shadow-*` is deliberately near-nil
+ * in the dark theme rather than absent, which is why these can be applied
+ * unconditionally: dark keeps looking like dark, light gains weight, and
+ * the escalation blocks in tokens.css deepen the shadow as the run gets
+ * worse so tension reads through elevation instead of luminance.
+ */
+.card,
+.mini,
+.panel,
+.pcard,
+.client-card,
+.threat,
+.comms,
+.outcome,
+.verdict,
+.gap,
+.rc,
+.sys,
+.pill,
+.scorecard,
+.brief-rule,
+.bp,
+.msg,
+.ransom,
+.field input[type='text'],
+.field input[type='email'] {
+  box-shadow: var(--shadow-sm);
+}
+.sheet,
+.inject {
+  box-shadow: var(--shadow-xl);
+}
+/* Interactive cards lift on hover, which on a light ground is a clearer
+   affordance than a border colour change. */
+.pcard:hover:not([disabled]),
+.client-card:hover,
+.pill:hover:not(:disabled) {
+  box-shadow: var(--shadow-lg);
+}
 
 .btn {
   font-family: var(--display);
@@ -180,7 +281,7 @@ h1, h2, h3, h4 {
   letter-spacing: 0.01em;
   color: var(--text);
   background: linear-gradient(180deg, var(--panel2), var(--panel));
-  border: 1px solid var(--line2);
+  border: 1px solid var(--edge);
   border-radius: var(--r-sm);
   min-height: var(--tap);
   padding: 11px 20px;
@@ -194,7 +295,7 @@ h1, h2, h3, h4 {
 }
 .btn:hover:not(:disabled) {
   border-color: var(--brand);
-  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.35), 0 8px 24px -12px rgba(139, 92, 246, 0.7);
+  box-shadow: 0 0 0 1px rgb(var(--brand-glow-rgb) / 35%), 0 8px 24px -12px rgb(var(--brand-glow-rgb) / 70%);
 }
 .btn:active:not(:disabled) {
   transform: translateY(1px) scale(0.99);
@@ -204,16 +305,16 @@ h1, h2, h3, h4 {
   cursor: not-allowed;
 }
 .btn.primary {
-  background: linear-gradient(180deg, var(--brand), #6d3ee0);
+  background: linear-gradient(180deg, var(--brand-glow), var(--brand));
   border-color: var(--brand-b);
-  box-shadow: 0 10px 30px -14px rgba(139, 92, 246, 0.95);
+  box-shadow: 0 10px 30px -14px rgb(var(--brand-glow-rgb) / 95%);
 }
 .btn.primary:hover:not(:disabled) {
   filter: brightness(1.1);
 }
 .btn.ghost {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: var(--line);
+  background: var(--fill-1);
+  border-color: var(--edge);
 }
 .btn.sm {
   font-size: 13px;
@@ -235,7 +336,7 @@ h1, h2, h3, h4 {
 }
 
 .panel {
-  background: linear-gradient(180deg, rgba(34, 22, 90, 0.55), rgba(25, 15, 58, 0.72));
+  background: linear-gradient(180deg, rgb(var(--panel2-rgb) / 55%), rgb(var(--panel-rgb) / 72%));
   border: 1px solid var(--line);
   border-radius: var(--r);
   backdrop-filter: blur(6px);
@@ -253,7 +354,7 @@ h1, h2, h3, h4 {
   border-radius: 7px;
   border: 1px solid var(--tone, var(--line2));
   color: var(--tone-b, var(--dim));
-  background: color-mix(in srgb, var(--tone, var(--brand)) 12%, transparent);
+  background: rgb(var(--tone-rgb, var(--brand-rgb)) / 12%);
   white-space: nowrap;
 }
 
@@ -281,7 +382,7 @@ hr.rule {
 /* Visible focus, always. The whole game is completable from the keyboard,
  * and a focus ring you cannot see is the same as no keyboard support. */
 :focus-visible {
-  outline: 2px solid var(--brand-b);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -353,13 +454,10 @@ hr.rule {
   }
 }
 
-/* Honor the OS setting for contrast without inventing a second theme. */
+/* The palette side of prefers-contrast lives in tokens.css, where the
+   audit can measure it. This is the part that is not a colour. */
 @media (prefers-contrast: more) {
-  :root {
-    --dim: #cdc4e8;
-    --faint: #9a8fc0;
-    --line: #4a3a86;
-    --line2: #6a55b8;
+  .scan {
+    display: none;
   }
-  .scan { display: none; }
 }

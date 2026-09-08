@@ -28,13 +28,13 @@
   height: 11px;
   border-radius: 50%;
   background: var(--brand);
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.16), 0 0 16px rgba(139, 92, 246, 0.85);
+  box-shadow: 0 0 0 4px rgb(var(--brand-glow-rgb) / 16%), 0 0 16px rgb(var(--brand-glow-rgb) / 85%);
   flex: none;
   animation: breathe 2.6s ease-in-out infinite;
 }
 @keyframes breathe {
   50% {
-    box-shadow: 0 0 0 6px rgba(51, 230, 174, 0.09), 0 0 26px rgba(51, 230, 174, 1);
+    box-shadow: 0 0 0 6px rgb(var(--green-glow-rgb) / 9%), 0 0 26px rgb(var(--green-glow-rgb) / 100%);
   }
 }
 .brand .name {
@@ -60,7 +60,7 @@
   padding: 6px 11px;
   border-radius: 9px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--fill-1);
   min-width: 0;
 }
 .hud-client .cl-meta {
@@ -101,7 +101,7 @@
 }
 .stage-pips i.now {
   background: var(--brand-b);
-  box-shadow: 0 0 10px rgba(183, 148, 246, 0.8);
+  box-shadow: 0 0 10px rgb(var(--brand-b-rgb) / 80%);
 }
 .stage-pips i.ok {
   background: var(--green);
@@ -123,7 +123,7 @@
   border-radius: 8px;
   border: 1px solid var(--tone, var(--line2));
   color: var(--tone-b, var(--dim));
-  background: color-mix(in srgb, var(--tone, var(--brand)) 14%, transparent);
+  background: rgb(var(--tone-rgb, var(--brand-rgb)) / 14%);
   white-space: nowrap;
 }
 
@@ -135,7 +135,7 @@
   justify-content: center;
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--fill-1);
   color: var(--dim);
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s;

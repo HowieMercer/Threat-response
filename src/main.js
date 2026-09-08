@@ -19,6 +19,7 @@ import { rightBackupFor } from './engine/resolve.js';
 import { createField } from './render/canvas.js';
 import { createAudio } from './render/audio.js';
 import { initFx, vignette } from './render/fx.js';
+import { Theme, Escalation } from './render/theme.js';
 import { Store, post } from './store.js';
 import { h, mount, qs } from './ui/dom.js';
 import { VERSION } from './config.js';
@@ -31,9 +32,12 @@ import { renderClimax, renderImpact } from './screens/climax.js';
 import { renderResult, incidentReport } from './screens/result.js';
 import { openHelp, openStats } from './screens/overlays.js';
 
+/* Theme before anything paints, so there is no flash of the wrong ground. */
+Theme.init();
 initFx();
 
 const field = createField(qs('#bg'));
+Theme.onChange(() => field.refresh());
 const audio = createAudio();
 
 /* A run is reproducible from its code, so #ABCDE plays the identical five
@@ -86,6 +90,7 @@ const app = {
   render() {
     switch (game.state.phase) {
       case PHASE.ATTRACT:
+        Escalation.clear();
         vignette('calm');
         field.setMood('calm');
         field.setDepth(0);
@@ -93,12 +98,19 @@ const app = {
         renderAttract(app);
         break;
       case PHASE.BRIEF:
+        Escalation.clear();
         renderBrief(app);
         break;
       case PHASE.POSTURE:
+        Escalation.clear();
         renderPosture(app);
         break;
       case PHASE.RESULT:
+        /* The result screen is the artifact that gets screenshotted into a
+         * deck. It sits at the calm end of the drift regardless of how the
+         * run went — the score says what happened, the page does not need
+         * to still be flushed red. */
+        Escalation.clear();
         renderResult(app, game.summary());
         break;
       default:
@@ -179,6 +191,15 @@ const app = {
 
   /* ---------------------------------------------------------- chrome */
 
+  toggleTheme() {
+    const next = Theme.toggle();
+    app.render();
+    return next;
+  },
+  get theme() {
+    return Theme.current;
+  },
+
   toggleSound() {
     const m = !audio.settings.muted;
     audio.setMuted(m);
@@ -247,6 +268,11 @@ window.addEventListener('keydown', (e) => {
   if (k === 'm') {
     e.preventDefault();
     app.toggleSound();
+    return;
+  }
+  if (k === 't') {
+    e.preventDefault();
+    app.toggleTheme();
     return;
   }
   if (k === '?' || (k === '/' && e.shiftKey)) {
@@ -338,6 +364,8 @@ window.TR = {
   openStats: () => openStats(app),
   seedCode: () => game.state.seedCode,
   encodeSeed,
+  theme: (v) => (v ? Theme.set(v) : Theme.current),
+  fieldStats: () => field.stats(),
 };
 
 app.render();

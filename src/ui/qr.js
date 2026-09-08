@@ -376,7 +376,21 @@ export function encodeQR(text) {
 
 /* An <svg> element rather than a canvas: it scales to any tablet without
  * resampling, and it prints. */
-export function qrSvg(text, { size = 180, quiet = 3, dark = '#0C0820', light = '#EDE9FB' } = {}) {
+/* The module colours come from the token layer but they deliberately do NOT
+ * follow the theme. A scanner wants the largest luminance gap it can get,
+ * and this gets read off a tablet at an angle under exhibition lighting, so
+ * both themes render ink on paper. --anchor-ink and --on-ink are the two
+ * tokens that stay put across a theme switch, which is exactly the property
+ * needed here. */
+function tokenColor(name, fallback) {
+  if (typeof getComputedStyle !== 'function') return fallback;
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v ? `rgb(${v})` : fallback;
+}
+
+export function qrSvg(text, { size = 180, quiet = 3, dark, light } = {}) {
+  dark ??= tokenColor('--anchor-ink-rgb', 'rgb(20 6 40)');       /* token-fallback: --anchor-ink */
+  light ??= tokenColor('--on-ink-rgb', 'rgb(244 246 254)');     /* token-fallback: --on-ink */
   const matrix = encodeQR(text);
   const n = matrix.length;
   const total = n + quiet * 2;

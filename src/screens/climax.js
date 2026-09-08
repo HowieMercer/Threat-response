@@ -27,7 +27,10 @@ export function renderClimax(app) {
     onclick: () => finish(),
   }, 'Skip');
 
-  const overlay = h('div', { class: 'climax', role: 'dialog', 'aria-label': 'Impact imminent' },
+  /* .on-ink re-points the whole token scope for the subtree — see
+   * tokens.css. Without it every signal colour inside here is a light-theme
+   * ink measuring 2.0-3.5:1 against the inversion. */
+  const overlay = h('div', { class: 'climax on-ink', role: 'dialog', 'aria-label': 'Impact imminent' },
     h('div', { class: 'cx-label' }, holdsBackups ? 'NO RESTORE PATH' : 'IMPACT IMMINENT'),
     count,
     taunt,
@@ -91,7 +94,7 @@ export function renderImpact(app, summary, onDone) {
     onclick: () => finish(),
   }, 'Continue');
 
-  const overlay = h('div', { class: 'climax', role: 'dialog', 'aria-label': 'Aftermath' },
+  const overlay = h('div', { class: 'climax on-ink', role: 'dialog', 'aria-label': 'Aftermath' },
     h('div', { class: `cx-label${closed ? '' : ' held'}` },
       closed ? '07:40 — THE NEXT MORNING' : '06:12 — THE NEXT MORNING'),
     body,

@@ -21,10 +21,23 @@
 }
 .attract h1 em {
   font-style: normal;
-  background: linear-gradient(100deg, var(--brand-b), var(--green-b));
+  /* brand-glow into brand, not into green.
+   *
+   * In the dark theme this ran violet-to-mint and both ends were bright. On
+   * light, --green-b is a dark ink and --brand-b is darker still, so the
+   * same gradient ran dark-to-dark and lost the point. Running the
+   * heliotrope anchor into the text-safe brand keeps it recognisably
+   * N-able, keeps the whole word legible, and the last letters no longer
+   * fade into the page. */
+  background: linear-gradient(100deg, var(--brand-glow), var(--brand-b));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+:root[data-theme='dark'] .attract h1 em {
+  background: linear-gradient(100deg, var(--brand-b), var(--green-b));
+  -webkit-background-clip: text;
+  background-clip: text;
 }
 .attract .tag {
   font-size: clamp(15px, 2.3vw, 19px);
@@ -57,7 +70,7 @@
   padding: 13px 14px;
   border-radius: var(--r);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--fill-1);
 }
 .mini h3 {
   font-size: 13px;
@@ -74,7 +87,7 @@
   margin: 22px 0;
   width: 100%;
   position: relative;
-  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, var(--shade) 8%, var(--shade) 92%, transparent);
 }
 .ticker-row {
   display: flex;
@@ -93,7 +106,7 @@
   gap: 9px;
   font-family: var(--mono);
   font-size: 11.5px;
-  color: var(--faint);
+  color: var(--dim);
 }
 .ticker-item b {
   color: var(--red-b);
@@ -122,7 +135,7 @@
   align-items: baseline;
   font-size: 12.5px;
   padding: 4px 0;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+  border-bottom: 1px dashed var(--line);
 }
 .lb .pos {
   font-family: var(--mono);
@@ -159,7 +172,7 @@
   padding: 13px 14px;
   border-radius: var(--r);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--fill-1);
   color: var(--text);
   cursor: pointer;
   min-height: var(--tap);
@@ -213,7 +226,7 @@
   padding: 16px;
   border-radius: var(--r);
   border: 1px solid var(--tone);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 11%, transparent), rgba(25, 15, 58, 0.6));
+  background: linear-gradient(180deg, rgb(var(--tone-rgb) / 11%), rgb(var(--panel-rgb) / 60%));
   animation: card-in 0.5s var(--ease-out) both;
 }
 .bp:nth-child(2) { animation-delay: 0.1s; }
@@ -249,7 +262,7 @@
   padding: 14px 16px;
   border-radius: var(--r);
   border: 1px solid var(--line2);
-  background: rgba(30, 18, 72, 0.5);
+  background: rgb(var(--brand-deep-rgb) / 50%);
   text-align: left;
 }
 .brief-rule p {
@@ -295,7 +308,7 @@
   border-radius: 4px;
   border: 1px solid var(--brand);
   background: var(--brand);
-  box-shadow: 0 0 12px -2px rgba(139, 92, 246, 0.9);
+  box-shadow: 0 0 12px -2px rgb(var(--brand-glow-rgb) / 90%);
   transition: background 0.25s, box-shadow 0.25s;
 }
 .budget-pips i.spent {
@@ -316,7 +329,7 @@
   padding: 13px 14px 12px;
   border-radius: var(--r);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.026);
+  background: var(--fill-1);
   color: var(--text);
   cursor: pointer;
   transition: border-color 0.2s, transform 0.16s var(--snap), box-shadow 0.2s, opacity 0.2s;
@@ -337,7 +350,7 @@
 }
 .pcard[aria-pressed='true'] {
   border-color: var(--tone);
-  background: color-mix(in srgb, var(--tone) 11%, transparent);
+  background: rgb(var(--tone-rgb) / 11%);
   box-shadow: inset 0 0 0 1px var(--tone);
 }
 .pcard[aria-pressed='true']::after {
@@ -390,7 +403,7 @@
   color: var(--tone-b);
   padding: 6px 8px;
   border-radius: 7px;
-  background: color-mix(in srgb, var(--tone) 12%, transparent);
+  background: rgb(var(--tone-rgb) / 12%);
 }
 
 .posture-foot {
@@ -409,22 +422,66 @@
 
 /* -------------------------------------------------------------- climax */
 
+/* THE INVERSION.
+ *
+ * Stages one to five play in daylight. This is the only moment the game
+ * goes dark, and it arrives at the point the business is about to close —
+ * which is the beat the whole pitch is built on, so it is staged rather
+ * than faded.
+ *
+ * A fade would read as a dialog opening. What this does instead is put the
+ * lights out: the ink comes from the centre as an expanding circle, fast
+ * (380ms) and on an ease-out so it accelerates away from the middle. On a
+ * near-white page that reads as a blackout. It is also the one transition
+ * in the build that gets to be theatrical, because it happens once.
+ *
+ * The way back out matters as much: the overlay is removed and stage five
+ * is underneath in full daylight, on the warmest, hardest-edged surface of
+ * the run. Lights out, three seconds, lights on and the attacker is at the
+ * door.
+ */
 .climax {
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: #05030f;
+  background: var(--ink);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   padding: 24px;
-  animation: black-in 0.5s ease both;
+  animation: lights-out 0.38s var(--ease-out) both;
 }
-@keyframes black-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@keyframes lights-out {
+  from {
+    clip-path: circle(0% at 50% 50%);
+    opacity: 0.4;
+  }
+  to {
+    clip-path: circle(120% at 50% 50%);
+    opacity: 1;
+  }
+}
+/* The content arrives after the room is dark, not with it. */
+.climax > * {
+  animation: cx-in 0.42s var(--ease-out) both;
+  animation-delay: 0.3s;
+}
+@keyframes cx-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* A circular wipe is exactly the effect this setting exists to suppress.
+     Straight cut, no delay — the content is not a decoration. */
+  .climax,
+  .climax > * {
+    animation: none;
+    clip-path: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 .climax .cx-label {
   font-family: var(--mono);
@@ -439,7 +496,8 @@
   font-size: clamp(90px, 26vw, 220px);
   line-height: 1;
   color: var(--red-b);
-  text-shadow: 0 0 60px rgba(255, 77, 103, 0.7);
+  /* The glow is the only light in the room. */
+  text-shadow: 0 0 70px rgb(var(--red-glow-rgb) / 55%), 0 0 24px rgb(var(--red-glow-rgb) / 35%);
 }
 .climax .cx-count.beat {
   animation: beat 0.9s var(--ease-out) both;
@@ -473,13 +531,13 @@
   padding: 18px;
   border-radius: var(--r);
   border: 1px solid var(--red);
-  background: rgba(10, 4, 16, 0.92);
+  background: rgb(var(--ink-rgb) / 92%);
   text-align: left;
   font-family: var(--mono);
   font-size: 13px;
   line-height: 1.65;
   color: var(--red-b);
-  box-shadow: 0 0 80px -20px rgba(255, 77, 103, 0.6);
+  box-shadow: 0 0 80px -20px rgb(var(--red-glow-rgb) / 60%);
   /* The note is typed in as text with blank lines between paragraphs. Without
      this they collapse to spaces and the whole thing lands as one block,
      which is the one beat in the game that most needs to be readable. */
@@ -496,14 +554,14 @@
   font-family: var(--display);
   font-size: 20px;
   letter-spacing: 0.08em;
-  color: #fff;
+  color: var(--on-ink);
   margin-bottom: 12px;
 }
 /* The same panel, for the run where the business opened on time. */
 .ransom.held {
   border-color: var(--green);
   color: var(--green-b);
-  box-shadow: 0 0 80px -20px rgba(51, 230, 174, 0.5);
+  box-shadow: 0 0 80px -20px rgb(var(--green-glow-rgb) / 50%);
 }
 .climax .cx-label.held {
   color: var(--green);
@@ -547,7 +605,7 @@
   position: fixed;
   inset: 0;
   z-index: 70;
-  background: rgba(6, 3, 16, 0.78);
+  background: var(--scrim);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -562,8 +620,8 @@
   flex-direction: column;
   border-radius: var(--r);
   border: 1px solid var(--line2);
-  background: linear-gradient(180deg, #1d1147, #150c33);
-  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.9);
+  background: linear-gradient(180deg, var(--panel2), var(--panel));
+  box-shadow: 0 40px 90px -30px rgb(var(--shade-rgb) / 90%);
   animation: card-in 0.26s var(--ease-out) both;
 }
 .sheet.wide {
@@ -619,7 +677,7 @@
   grid-template-columns: 168px minmax(0, 1fr);
   gap: 11px;
   padding: 6px 0;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+  border-bottom: 1px dashed var(--line);
   align-items: baseline;
 }
 .kv-k {

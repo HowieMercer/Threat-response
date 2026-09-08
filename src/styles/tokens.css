@@ -1,17 +1,65 @@
-/* Tokens first: fonts, color, spacing, radii. Nothing in here paints
- * anything — it only names things. Everything else imports from here.
+/* The token layer.
  *
- * Fonts are self-hosted. v12 pulled four families from Google Fonts,
- * which meant the "one offline file, no network" line in customer-facing
- * material was not true, and the game rendered in system sans-serif on
- * exactly the machines it was built for: a USB stick at a stand, a
- * locked-down laptop, a venue with no wifi.
+ * Nothing in this file paints anything. It only names things, and it is the
+ * only place in `src/` allowed to contain a colour literal — there is a
+ * check for that in `scripts/contrast-audit.mjs`.
  *
- * Cost of fixing it: 44.8 KB of woff2, subset to Latin plus the
- * typographic marks the UI actually uses. Inter and JetBrains Mono are
- * variable fonts, so one file each covers every weight. Space Grotesk was
- * dropped — four families for one page was one too many, and it was only
- * ever doing what Chakra Petch already does.
+ * ── Why it is shaped like this ────────────────────────────────────────────
+ *
+ * v13 declared 27 colour tokens here and then made 128 further colour
+ * decisions elsewhere, 86 of them `rgba()` re-statements of a colour that
+ * was already a token. Editing this file changed about a fifth of the
+ * visible colour, so "swap the palette" was not a thing you could do.
+ *
+ * Two mechanisms fix that:
+ *
+ *   1. Every colour is declared once as an **unwrapped RGB channel triple**
+ *      (`--red-rgb: 176 0 32`) and once resolved (`--red: rgb(var(--red-rgb))`).
+ *      Anything that needs the colour at partial alpha writes
+ *      `rgb(var(--red-rgb) / 12%)` instead of inventing an `rgba()`. That is
+ *      CSS Color 4 space-separated syntax with slash alpha — Chrome 65,
+ *      Safari 12.1 — deliberately chosen over `color-mix()`, which is
+ *      Chrome 111 / Safari 16.2 and would strand the locked-down customer
+ *      machine this file exists to run on.
+ *
+ *   2. Only the triples are redefined per theme. Every resolved token, every
+ *      `.t-*` tone class and every call site is theme-independent, so the
+ *      dark theme costs one block at the bottom of this file and nothing
+ *      downstream.
+ *
+ * ── The gotcha that cost an hour ─────────────────────────────────────────
+ *
+ * `--red: rgb(var(--red-rgb))` is computed ON `:root`. The result inherits
+ * down as a finished string, so overriding `--red-rgb` on a DESCENDANT does
+ * not re-resolve `--red` — the descendant still gets the root's value.
+ *
+ * That is why the theme and stage blocks are all `:root…` selectors: a
+ * same-element override resolves together in the cascade and works. And it
+ * is why `.on-ink`, which is a subtree scope rather than a root state, has
+ * to set BOTH the triple and the resolved token. The triple is what
+ * `rgb(var(--x-rgb) / N%)` call sites read; the resolved token is what
+ * `var(--x)` call sites read. Set one and half the subtree is wrong, which
+ * is exactly what the stage-five countdown looked like.
+ *
+ * ── The variant contract ─────────────────────────────────────────────────
+ *
+ * Each signal colour has four variants, and their meanings are *semantic*,
+ * not lightness directions. This is what lets the same CSS work in both
+ * themes:
+ *
+ *   --x         the colour itself. Safe as a border, a fill or an icon stroke.
+ *   --x-b       the EMPHASIS variant. Guaranteed >= 4.5:1 on the page ground,
+ *               so it is the only one allowed to carry text. Darker than --x
+ *               in light, brighter in dark.
+ *   --x-deep    the SUBTLE FILL variant. Sits behind --x-b text. Pale in
+ *               light, near-black in dark.
+ *   --x-glow    the ENERGY variant. Saturated and bright in both themes, for
+ *               halos, particles and glows where the colour reads as light
+ *               rather than as information. Never used for text.
+ *
+ * v13's `-b` meant "brighter" and `-deep` meant "dark fill", which are the
+ * same thing as the above in a dark theme and nonsense in a light one. The
+ * rename is the whole reason `color: var(--tone-b)` still works untouched.
  */
 
 @font-face {
@@ -43,41 +91,194 @@
   src: url('../assets/fonts/jetbrains-mono-var.woff2') format('woff2-variations');
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   BRAND ANCHORS — the swap point.
+
+   These three are N-able's published palette and they are still an
+   unsigned pre-launch confirmation item. When the official codes land,
+   change them HERE and nowhere else. Everything below is derived.
+   ═══════════════════════════════════════════════════════════════════════ */
 :root {
-  --bg: #0c0820;
-  --bg2: #140a2c;
-  --panel: #190f3a;
-  --panel2: #22165a;
-  --line: #2c2058;
-  --line2: #3e2e80;
+  --anchor-surface-rgb: 244 246 254;  /* #F4F6FE  cool near-white */
+  --anchor-brand-rgb:   192  70 255;  /* #C046FF  heliotrope */
+  --anchor-ink-rgb:      20   6  40;  /* #140628  deep violet */
 
-  --text: #ede9fb;
-  --dim: #a99fc8;
-  --faint: #6a5e92;
+  --anchor-surface: rgb(var(--anchor-surface-rgb));
+  --anchor-brand: rgb(var(--anchor-brand-rgb));
+  --anchor-ink: rgb(var(--anchor-ink-rgb));
+}
 
-  --green: #33e6ae;
-  --green-b: #82ffd2;
-  --green-deep: #0c3327;
+/* ═══════════════════════════════════════════════════════════════════════
+   LIGHT THEME — the default.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Ground. Note the inversion against v13: on light, a raised panel is
+     LIGHTER than the page, not darker. */
+  --bg-rgb: var(--anchor-surface-rgb);
+  --bg2-rgb: 233 237 251;
+  --panel-rgb: 255 255 255;
+  --panel2-rgb: 249 250 255;
+  --line-rgb: 214 220 242;
+  --line2-rgb: 178 187 224;
 
-  --blue: #4fa8ff;
-  --blue-b: #96ccff;
-  --blue-deep: #10254a;
+  /* --line/--line2 are decorative hairlines. --edge is different: it is the
+     boundary of a control that has no other visual anchor — a text input, a
+     ghost button — so WCAG 1.4.11 applies and it must clear 3:1 on both the
+     page and a card. --focus is the ring, same rule, and it is deliberately
+     not the brand fill: heliotrope is 3.5:1 on the surface and a focus ring
+     wants more headroom than that. */
+  --edge-rgb: 108 116 156;
+  --focus-rgb: 90 33 160;
 
-  --violet: #c9a6ff;
-  --violet-b: #e2ccff;
-  --violet-deep: #2c1c5a;
+  /* Type. --text is the ink anchor; dim and faint are measured at 7.2:1
+     and 4.6:1 on the surface. */
+  --text-rgb: var(--anchor-ink-rgb);
+  --dim-rgb: 74 68 102;
+  --faint-rgb: 106 100 136;
 
-  --amber: #ffb23e;
-  --amber-b: #ffd08a;
-  --amber-deep: #3a2a0e;
+  /* Ink. The climax inversion and every scrim. */
+  --ink-rgb: var(--anchor-ink-rgb);
 
-  --red: #ff4d67;
-  --red-b: #ff8198;
-  --red-deep: #3a0e1a;
+  /* ── Signals ──────────────────────────────────────────────────────────
+     Every bright v13 value failed on a near-white surface: green 1.49:1,
+     amber 1.66:1, blue 2.32:1, red 2.99:1. They survive as -glow, where
+     they are light and not information. The -b variants are the measured
+     text-safe ones. */
 
-  --brand: #8b5cf6;
-  --brand-b: #b794f6;
-  --brand-deep: #1e1248;
+  --green-rgb: 13 124 90;
+  --green-b-rgb: 9 94 68;
+  --green-deep-rgb: 226 246 239;
+  --green-glow-rgb: 51 230 174;
+
+  --blue-rgb: 29 78 216;
+  --blue-b-rgb: 24 62 173;
+  --blue-deep-rgb: 227 235 254;
+  --blue-glow-rgb: 79 168 255;
+
+  /* Secure's accent. Distinct from the brand violet on purpose — a pillar
+     colour that matches the brand colour stops reading as a pillar. */
+  --violet-rgb: 109 40 217;
+  --violet-b-rgb: 88 28 176;
+  --violet-deep-rgb: 240 233 254;
+  --violet-glow-rgb: 201 166 255;
+
+  --amber-rgb: 138 83 0;
+  --amber-b-rgb: 112 67 0;
+  --amber-deep-rgb: 253 240 219;
+  --amber-glow-rgb: 255 178 62;
+
+  --red-rgb: 176 0 32;
+  --red-b-rgb: 145 0 26;
+  --red-deep-rgb: 253 231 234;
+  --red-glow-rgb: 255 77 103;
+
+  /* Brand. Split in two, which v13 did not need to do: the heliotrope
+     anchor is 3.5:1 on the surface — correct as a fill, a border or a dial
+     stroke, and unusable as a label. --brand carries text, --brand-glow is
+     the anchor itself. */
+  --brand-rgb: 122 31 184;
+  --brand-b-rgb: 99 22 150;
+  --brand-deep-rgb: 246 233 255;
+  --brand-glow-rgb: var(--anchor-brand-rgb);
+
+  /* Text that sits ON a brand-glow fill. #140628 on #C046FF is 5.1:1;
+     white on #C046FF is 3.8:1 and fails, which is why this is not white. */
+  --on-brand-rgb: var(--anchor-ink-rgb);
+
+  /* Text that sits ON a saturated signal fill — the BLACKVAULT track pill,
+     the TARGET flag. Unlike --on-brand this one IS theme-dependent: in
+     light the signals are dark inks so the label goes white; in dark they
+     are bright so it goes to the ink anchor. */
+  --on-signal-rgb: 255 255 255;
+
+  /* Surface fills. v13 wrote these as white at 2.5-3.5% alpha, which means
+     "slightly lighter than a dark ground" — a statement with no light-mode
+     translation. Named by role instead, so each theme answers it its own
+     way: in light a card is a white card with a shadow, in dark it is a
+     barely-lifted wash. */
+  --fill-1: rgb(var(--panel-rgb));
+  --fill-2: rgb(var(--panel2-rgb));
+  --fill-3: rgb(var(--bg2-rgb));
+  --shade: rgb(var(--shade-rgb));
+  --lift: rgb(var(--lift-rgb));
+  --on-ink: rgb(var(--on-ink-rgb));
+
+  /* Modal backdrop. */
+  --scrim: rgb(var(--ink-rgb) / 46%);
+
+  /* The two neutral directions.
+   *
+   * v13 used bare `white` and `black` at low alpha for "lift this a bit"
+   * and "darken this a bit" — 22 separate times. Both are theme
+   * statements pretending to be primitives: white at 3% is a lift on a
+   * dark ground and literally invisible on a light one. Named by
+   * direction, resolved per theme, used as rgb(var(--shade-rgb) / N%). */
+  --shade-rgb: var(--anchor-ink-rgb);
+  --lift-rgb: 255 255 255;
+
+  /* Text on the ink surface. The stage-five inversion and the ransom note
+     are dark in BOTH themes — that is the whole point of the inversion —
+     so this one does not flip. */
+  --on-ink-rgb: var(--anchor-surface-rgb);
+
+  /* ── Resolved. Theme-independent from here down. ──────────────────── */
+  --bg: rgb(var(--bg-rgb));
+  --bg2: rgb(var(--bg2-rgb));
+  --panel: rgb(var(--panel-rgb));
+  --panel2: rgb(var(--panel2-rgb));
+  --line: rgb(var(--line-rgb));
+  --line2: rgb(var(--line2-rgb));
+  --edge: rgb(var(--edge-rgb));
+  --focus: rgb(var(--focus-rgb));
+  --text: rgb(var(--text-rgb));
+  --dim: rgb(var(--dim-rgb));
+  --faint: rgb(var(--faint-rgb));
+  --ink: rgb(var(--ink-rgb));
+
+  --green: rgb(var(--green-rgb));
+  --green-b: rgb(var(--green-b-rgb));
+  --green-deep: rgb(var(--green-deep-rgb));
+  --green-glow: rgb(var(--green-glow-rgb));
+
+  --blue: rgb(var(--blue-rgb));
+  --blue-b: rgb(var(--blue-b-rgb));
+  --blue-deep: rgb(var(--blue-deep-rgb));
+  --blue-glow: rgb(var(--blue-glow-rgb));
+
+  --violet: rgb(var(--violet-rgb));
+  --violet-b: rgb(var(--violet-b-rgb));
+  --violet-deep: rgb(var(--violet-deep-rgb));
+  --violet-glow: rgb(var(--violet-glow-rgb));
+
+  --amber: rgb(var(--amber-rgb));
+  --amber-b: rgb(var(--amber-b-rgb));
+  --amber-deep: rgb(var(--amber-deep-rgb));
+  --amber-glow: rgb(var(--amber-glow-rgb));
+
+  --red: rgb(var(--red-rgb));
+  --red-b: rgb(var(--red-b-rgb));
+  --red-deep: rgb(var(--red-deep-rgb));
+  --red-glow: rgb(var(--red-glow-rgb));
+
+  --brand: rgb(var(--brand-rgb));
+  --brand-b: rgb(var(--brand-b-rgb));
+  --brand-deep: rgb(var(--brand-deep-rgb));
+  --brand-glow: rgb(var(--brand-glow-rgb));
+  --on-brand: rgb(var(--on-brand-rgb));
+  --on-signal: rgb(var(--on-signal-rgb));
+
+  /* ── Elevation ────────────────────────────────────────────────────────
+     On a dark surface tension came from things getting darker. On light it
+     has to come from weight, so shadow is a token now rather than a value
+     typed into whichever rule needed it. The stage blocks below deepen it. */
+  --shadow-sm: 0 1px 2px rgb(var(--shade-rgb) / 6%), 0 1px 1px rgb(var(--shade-rgb) / 4%);
+  --shadow: 0 2px 4px rgb(var(--shade-rgb) / 6%), 0 6px 16px -6px rgb(var(--shade-rgb) / 12%);
+  --shadow-lg: 0 4px 8px rgb(var(--shade-rgb) / 8%), 0 18px 40px -12px rgb(var(--shade-rgb) / 18%);
+  --shadow-xl: 0 8px 16px rgb(var(--shade-rgb) / 10%), 0 40px 80px -24px rgb(var(--shade-rgb) / 26%);
+
+  /* Border weight. Hairlines at rest, heavier as the run gets serious. */
+  --hair: 1px;
+  --rule: 1px;
 
   --r: 16px;
   --r-sm: 11px;
@@ -101,11 +302,315 @@
   --snap: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Per-pillar accents, so a card, a chip and a map marker for the same
- * pillar can never drift apart. */
-.t-blue   { --tone: var(--blue);   --tone-b: var(--blue-b);   --tone-deep: var(--blue-deep); }
-.t-violet { --tone: var(--violet); --tone-b: var(--violet-b); --tone-deep: var(--violet-deep); }
-.t-green  { --tone: var(--green);  --tone-b: var(--green-b);  --tone-deep: var(--green-deep); }
-.t-amber  { --tone: var(--amber);  --tone-b: var(--amber-b);  --tone-deep: var(--amber-deep); }
-.t-red    { --tone: var(--red);    --tone-b: var(--red-b);    --tone-deep: var(--red-deep); }
-.t-brand  { --tone: var(--brand);  --tone-b: var(--brand-b);  --tone-deep: var(--brand-deep); }
+/* ═══════════════════════════════════════════════════════════════════════
+   ESCALATION — chroma and weight, not luminance.
+
+   Dark-to-darker is unavailable on a light surface, so the stage index sets
+   these on :root and the surface drifts from cool neutral to warm, the
+   borders harden, the radii tighten and the shadows deepen. The intent is
+   that the stage is readable from a thumbnail with the text blurred out.
+
+   Set by src/screens/stage.js. Absent on every non-stage screen, so the
+   attract, briefing and result screens sit at the calm end by default.
+   ═══════════════════════════════════════════════════════════════════════ */
+/* --stage-tint is an inset wash on the vignette that the stage sets
+   directly, so escalation reads even on the run where the player is
+   containing everything and the intrusion track stays short. Without it
+   "which stage is this" and "how badly is it going" were the same signal,
+   and an expert's stage five looked like a beginner's stage one. */
+:root {
+  --stage-tint: rgb(var(--brand-rgb) / 0%);
+  --stage-tint-size: 0px;
+}
+
+:root[data-stage='1'] {
+  --bg-rgb: 244 246 254;
+  --bg2-rgb: 233 237 251;
+  --panel-rgb: 255 255 255;
+}
+:root[data-stage='2'] {
+  --bg-rgb: 247 245 252;
+  --bg2-rgb: 238 234 249;
+  --panel-rgb: 255 255 255;
+  --line-rgb: 216 212 240;
+  --stage-tint: rgb(var(--brand-rgb) / 4%);
+  --stage-tint-size: 110px;
+}
+:root[data-stage='3'] {
+  --bg-rgb: 250 244 248;
+  --bg2-rgb: 243 230 238;
+  --panel-rgb: 255 253 254;
+  --line-rgb: 224 208 220;
+  --line2-rgb: 192 168 186;
+  --rule: 1.5px;
+  --r: 14px;
+  --r-sm: 10px;
+  --stage-tint: rgb(var(--red-rgb) / 5%);
+  --stage-tint-size: 150px;
+}
+:root[data-stage='4'] {
+  --bg-rgb: 253 240 239;
+  --bg2-rgb: 250 222 220;
+  --panel-rgb: 255 251 250;
+  --line-rgb: 238 198 196;
+  --line2-rgb: 216 152 150;
+  --rule: 2px;
+  --r: 12px;
+  --r-sm: 9px;
+  --stage-tint: rgb(var(--red-rgb) / 9%);
+  --stage-tint-size: 190px;
+  --shadow-sm: 0 1px 3px rgb(var(--shade-rgb) / 9%), 0 2px 2px rgb(var(--shade-rgb) / 6%);
+  --shadow: 0 2px 5px rgb(var(--shade-rgb) / 11%), 0 8px 20px -6px rgb(var(--shade-rgb) / 20%);
+  --shadow-lg: 0 5px 10px rgb(var(--shade-rgb) / 14%), 0 22px 48px -12px rgb(var(--shade-rgb) / 28%);
+}
+:root[data-stage='5'] {
+  --bg-rgb: 253 235 233;
+  --bg2-rgb: 250 212 209;
+  --panel-rgb: 255 249 248;
+  --line-rgb: 240 186 183;
+  --line2-rgb: 220 134 130;
+  --rule: 2px;
+  --r: 10px;
+  --r-sm: 8px;
+  --stage-tint: rgb(var(--red-rgb) / 14%);
+  --stage-tint-size: 240px;
+  --shadow-sm: 0 1px 3px rgb(var(--shade-rgb) / 11%), 0 2px 3px rgb(var(--shade-rgb) / 8%);
+  --shadow: 0 2px 6px rgb(var(--shade-rgb) / 13%), 0 10px 24px -6px rgb(var(--shade-rgb) / 24%);
+  --shadow-lg: 0 6px 12px rgb(var(--shade-rgb) / 16%), 0 26px 56px -12px rgb(var(--shade-rgb) / 32%);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DARK THEME — [data-theme="dark"].
+
+   This block is the proof the token layer is honest: it redefines triples
+   only, touches no call site, and is the entire cost of keeping the v13
+   look available for a dim room or a dark website embed.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root[data-theme='dark'] {
+  --bg-rgb: 12 8 32;
+  --bg2-rgb: 20 10 44;
+  --panel-rgb: 25 15 58;
+  --panel2-rgb: 34 22 90;
+  --line-rgb: 44 32 88;
+  --line2-rgb: 62 46 128;
+  --edge-rgb: 124 112 180;
+  --focus-rgb: 201 156 255;
+
+  --text-rgb: 237 233 251;
+  --dim-rgb: 169 159 200;
+  --faint-rgb: 138 128 176;
+
+  --ink-rgb: 0 0 0;
+
+  /* -b is the emphasis variant, so in dark it goes brighter. -deep is the
+     subtle fill, so in dark it goes near-black. Same contract, inverted
+     execution, no call site aware of it. */
+  --green-rgb: 51 230 174;
+  --green-b-rgb: 130 255 210;
+  --green-deep-rgb: 12 51 39;
+  --green-glow-rgb: 51 230 174;
+
+  --blue-rgb: 79 168 255;
+  --blue-b-rgb: 150 204 255;
+  --blue-deep-rgb: 16 37 74;
+  --blue-glow-rgb: 79 168 255;
+
+  --violet-rgb: 201 166 255;
+  --violet-b-rgb: 226 204 255;
+  --violet-deep-rgb: 44 28 90;
+  --violet-glow-rgb: 201 166 255;
+
+  --amber-rgb: 255 178 62;
+  --amber-b-rgb: 255 208 138;
+  --amber-deep-rgb: 58 42 14;
+  --amber-glow-rgb: 255 178 62;
+
+  --red-rgb: 255 77 103;
+  --red-b-rgb: 255 129 152;
+  --red-deep-rgb: 58 14 26;
+  --red-glow-rgb: 255 77 103;
+
+  --brand-rgb: 176 106 255;
+  --brand-b-rgb: 201 156 255;
+  --brand-deep-rgb: 30 18 72;
+  --brand-glow-rgb: var(--anchor-brand-rgb);
+
+  /* On a dark theme the heliotrope fill is light enough to take dark text
+     still — 5.1:1 either way, so this does not move. */
+  --on-brand-rgb: var(--anchor-ink-rgb);
+  --on-signal-rgb: var(--anchor-ink-rgb);
+
+  --shade-rgb: 0 0 0;
+  --lift-rgb: 255 255 255;
+  --on-ink-rgb: var(--anchor-surface-rgb);
+
+  --fill-1: rgb(var(--lift-rgb) / 3%);
+  --fill-2: rgb(var(--lift-rgb) / 5.5%);
+  --fill-3: rgb(var(--shade-rgb) / 22%);
+
+  --scrim: rgb(var(--shade-rgb) / 78%);
+
+  /* Shadow does almost nothing on a near-black ground. Elevation in dark
+     comes from the border, so these shrink rather than being deleted —
+     deleting them would make the stage blocks above theme-dependent. */
+  --shadow-sm: 0 1px 2px rgb(var(--shade-rgb) / 30%);
+  --shadow: 0 4px 12px -4px rgb(var(--shade-rgb) / 50%);
+  --shadow-lg: 0 12px 32px -10px rgb(var(--shade-rgb) / 65%);
+  --shadow-xl: 0 24px 64px -20px rgb(var(--shade-rgb) / 80%);
+}
+
+/* The stage drift, dark. Escalation there is the v13 behaviour: the ground
+   warms toward red but stays dark. */
+:root[data-theme='dark'][data-stage='1'] { --panel-rgb: 25 15 58; }
+:root[data-theme='dark'][data-stage='2'] { --panel-rgb: 25 15 58; --stage-tint: rgb(var(--brand-glow-rgb) / 5%); }
+:root[data-theme='dark'][data-stage='3'] { --bg-rgb: 16 8 30; --bg2-rgb: 26 10 40; --panel-rgb: 28 14 52; --stage-tint: rgb(var(--red-glow-rgb) / 7%); }
+:root[data-theme='dark'][data-stage='4'] { --bg-rgb: 22 8 26; --bg2-rgb: 34 10 34; --line-rgb: 62 30 62; --panel-rgb: 34 14 44; --stage-tint: rgb(var(--red-glow-rgb) / 12%); }
+:root[data-theme='dark'][data-stage='5'] { --bg-rgb: 28 8 24; --bg2-rgb: 42 10 30; --line-rgb: 78 32 58; --panel-rgb: 40 14 38; --stage-tint: rgb(var(--red-glow-rgb) / 18%); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   THE INK SURFACE — .on-ink
+
+   The stage-five inversion and the ransom note are dark in BOTH themes,
+   which is the whole point of the inversion and also makes them a third
+   colour context. Measured on #140628, the light theme's signal inks come
+   out at 2.0-3.5:1: --red is 2.64, --brand 2.50, --faint 3.49. All fail.
+
+   Rather than rewriting the climax CSS to name -glow variants explicitly —
+   which would have made it theme-aware in a way nothing else here is — the
+   tokens are re-pointed for the subtree. `color: var(--red)` keeps meaning
+   "the readable red on whatever surface I am on", which is the property the
+   whole variant contract exists to provide. The audit measures this scope
+   as a third theme.
+   ═══════════════════════════════════════════════════════════════════════ */
+.on-ink {
+  --bg-rgb: var(--anchor-ink-rgb);
+  --bg2-rgb: var(--anchor-ink-rgb);
+  --panel-rgb: var(--anchor-ink-rgb);
+  --panel2-rgb: 32 14 58;
+  --line-rgb: 64 44 100;
+  --line2-rgb: 96 72 142;
+  --edge-rgb: 130 116 186;
+  --focus-rgb: var(--brand-glow-rgb);
+
+  --text-rgb: var(--on-ink-rgb);
+  --dim-rgb: 202 198 222;
+  --faint-rgb: 160 154 190;
+  --shade-rgb: 0 0 0;
+
+  /* Every signal points at its -glow, which is bright in both themes, and
+     -b goes brighter still so it stays the emphasis variant. */
+  --green-rgb: var(--green-glow-rgb);
+  --green-b-rgb: 130 255 210;
+  --green-deep-rgb: 10 44 34;
+
+  --blue-rgb: var(--blue-glow-rgb);
+  --blue-b-rgb: 150 204 255;
+  --blue-deep-rgb: 14 32 64;
+
+  --violet-rgb: var(--violet-glow-rgb);
+  --violet-b-rgb: 226 204 255;
+  --violet-deep-rgb: 38 24 76;
+
+  --amber-rgb: var(--amber-glow-rgb);
+  --amber-b-rgb: 255 208 138;
+  --amber-deep-rgb: 50 36 12;
+
+  --red-rgb: var(--red-glow-rgb);
+  --red-b-rgb: 255 150 168;
+  --red-deep-rgb: 52 12 24;
+
+  --brand-rgb: var(--brand-glow-rgb);
+  --brand-b-rgb: 214 168 255;
+  --brand-deep-rgb: 34 16 66;
+
+  --on-signal-rgb: var(--anchor-ink-rgb);
+
+  /* And now the same values again as resolved tokens, because this is a
+     subtree scope and not a root state — see the gotcha at the top of this
+     file. Without this half of the subtree reads the root's light-theme
+     values and the stage-five countdown renders in a crimson that measures
+     2.6:1 on the inversion. */
+  --bg: rgb(var(--bg-rgb));
+  --bg2: rgb(var(--bg2-rgb));
+  --panel: rgb(var(--panel-rgb));
+  --panel2: rgb(var(--panel2-rgb));
+  --line: rgb(var(--line-rgb));
+  --line2: rgb(var(--line2-rgb));
+  --edge: rgb(var(--edge-rgb));
+  --focus: rgb(var(--focus-rgb));
+  --text: rgb(var(--text-rgb));
+  --dim: rgb(var(--dim-rgb));
+  --faint: rgb(var(--faint-rgb));
+  --shade: rgb(var(--shade-rgb));
+
+  --green: rgb(var(--green-rgb));
+  --green-b: rgb(var(--green-b-rgb));
+  --green-deep: rgb(var(--green-deep-rgb));
+  --blue: rgb(var(--blue-rgb));
+  --blue-b: rgb(var(--blue-b-rgb));
+  --blue-deep: rgb(var(--blue-deep-rgb));
+  --violet: rgb(var(--violet-rgb));
+  --violet-b: rgb(var(--violet-b-rgb));
+  --violet-deep: rgb(var(--violet-deep-rgb));
+  --amber: rgb(var(--amber-rgb));
+  --amber-b: rgb(var(--amber-b-rgb));
+  --amber-deep: rgb(var(--amber-deep-rgb));
+  --red: rgb(var(--red-rgb));
+  --red-b: rgb(var(--red-b-rgb));
+  --red-deep: rgb(var(--red-deep-rgb));
+  --brand: rgb(var(--brand-rgb));
+  --brand-b: rgb(var(--brand-b-rgb));
+  --brand-deep: rgb(var(--brand-deep-rgb));
+  --on-signal: rgb(var(--on-signal-rgb));
+
+  --shadow-sm: 0 1px 2px rgb(var(--shade-rgb) / 30%);
+  --shadow: 0 4px 12px -4px rgb(var(--shade-rgb) / 50%);
+  --shadow-lg: 0 12px 32px -10px rgb(var(--shade-rgb) / 65%);
+  --shadow-xl: 0 24px 64px -20px rgb(var(--shade-rgb) / 80%);
+
+  /* The surface fills are not -rgb tokens, so the scope-gap check did not
+     catch these and the Continue button on the ransom screen rendered as
+     near-white text on a near-white ghost button. They are listed in
+     REQUIRED_IN_SCOPE in the audit now. */
+  --fill-1: rgb(var(--lift-rgb) / 5%);
+  --fill-2: rgb(var(--lift-rgb) / 9%);
+  --fill-3: rgb(var(--shade-rgb) / 28%);
+  --scrim: rgb(var(--shade-rgb) / 78%);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Increased-contrast preference. Overrides triples only, like a theme —
+   these lived in base.css in v13, which meant four more colour literals
+   outside the token layer and no way to audit them.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (prefers-contrast: more) {
+  :root {
+    --dim-rgb: 46 40 74;
+    --faint-rgb: 62 56 92;
+    --line-rgb: 168 176 210;
+    --line2-rgb: 128 138 186;
+    --edge-rgb: 74 82 124;
+  }
+  :root[data-theme='dark'] {
+    --dim-rgb: 214 208 240;
+    --faint-rgb: 182 174 216;
+    --line-rgb: 84 68 140;
+    --line2-rgb: 116 96 186;
+    --edge-rgb: 156 142 214;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Pillar tones.
+
+   Untouched from v13 by design. A card, a chip and a map marker for the
+   same pillar cannot drift apart because they all read --tone, and --tone
+   resolves through the variant contract above, so these six lines are the
+   only place the pillar/colour mapping exists in either theme.
+   ═══════════════════════════════════════════════════════════════════════ */
+.t-blue   { --tone-rgb: var(--blue-rgb);   --tone: var(--blue);   --tone-b: var(--blue-b);   --tone-deep: var(--blue-deep);   --tone-glow: var(--blue-glow); }
+.t-violet { --tone-rgb: var(--violet-rgb); --tone: var(--violet); --tone-b: var(--violet-b); --tone-deep: var(--violet-deep); --tone-glow: var(--violet-glow); }
+.t-green  { --tone-rgb: var(--green-rgb);  --tone: var(--green);  --tone-b: var(--green-b);  --tone-deep: var(--green-deep);  --tone-glow: var(--green-glow); }
+.t-amber  { --tone-rgb: var(--amber-rgb);  --tone: var(--amber);  --tone-b: var(--amber-b);  --tone-deep: var(--amber-deep);  --tone-glow: var(--amber-glow); }
+.t-red    { --tone-rgb: var(--red-rgb);    --tone: var(--red);    --tone-b: var(--red-b);    --tone-deep: var(--red-deep);    --tone-glow: var(--red-glow); }
+.t-brand  { --tone-rgb: var(--brand-rgb);  --tone: var(--brand);  --tone-b: var(--brand-b);  --tone-deep: var(--brand-deep);  --tone-glow: var(--brand-glow); }

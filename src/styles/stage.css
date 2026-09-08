@@ -37,8 +37,8 @@
   position: relative;
   height: 44px;
   border-radius: var(--r-sm);
-  border: 1px solid var(--line);
-  background: linear-gradient(90deg, rgba(255, 77, 103, 0.1), rgba(12, 8, 32, 0.5) 55%, rgba(51, 230, 174, 0.07));
+  border: 1px solid var(--line2);
+  background: linear-gradient(90deg, rgb(var(--red-rgb) / 10%), rgb(var(--bg-rgb) / 50%) 55%, rgb(var(--green-rgb) / 7%));
   overflow: hidden;
 }
 /* Hatching so the ground taken reads as territory, not as a progress bar */
@@ -47,7 +47,7 @@
   inset: 0 auto 0 0;
   width: 0;
   background:
-    repeating-linear-gradient(115deg, rgba(255, 77, 103, 0.35) 0 6px, rgba(255, 77, 103, 0.14) 6px 13px);
+    repeating-linear-gradient(115deg, rgb(var(--red-rgb) / 35%) 0 6px, rgb(var(--red-rgb) / 14%) 6px 13px);
   border-right: 1px solid var(--red);
   transition: width 0.12s linear;
 }
@@ -58,7 +58,7 @@
 }
 .track-ticks i {
   flex: 1;
-  border-right: 1px solid rgba(255, 255, 255, 0.045);
+  border-right: 1px solid var(--line);
 }
 .track-ticks i:last-child {
   border-right: 0;
@@ -74,14 +74,14 @@
   gap: 7px;
   padding: 4px 9px 4px 6px;
   border-radius: 8px;
-  background: linear-gradient(180deg, #ff6a80, #d8203f);
+  background: linear-gradient(180deg, var(--red-glow), var(--red));
   border: 1px solid var(--red-b);
-  box-shadow: 0 0 22px -4px rgba(255, 77, 103, 0.9);
+  box-shadow: 0 0 22px -4px rgb(var(--red-glow-rgb) / 90%);
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: #fff;
+  color: var(--on-signal);
   white-space: nowrap;
   transition: left 0.12s linear;
   z-index: 2;
@@ -91,8 +91,8 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 8px #fff;
+  background: var(--on-signal);
+  box-shadow: 0 0 8px rgb(var(--on-signal-rgb) / 85%);
   animation: pip 1s ease-in-out infinite;
 }
 @keyframes pip {
@@ -124,7 +124,7 @@
   padding: 9px 7px 8px;
   border-radius: var(--r-sm);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.028);
+  background: var(--fill-1);
   text-align: center;
   overflow: hidden;
   transition: border-color 0.35s var(--ease), background 0.35s var(--ease), opacity 0.35s var(--ease);
@@ -136,7 +136,9 @@
   height: 19px;
   fill: none;
   stroke: var(--green);
-  stroke-width: 1.6;
+  /* 1.6 was tuned against a glowing mint on near-black. The same weight in
+     a dark ink on near-white reads as a sketch. */
+  stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
   transition: stroke 0.35s var(--ease);
@@ -163,13 +165,13 @@
 }
 .sys.degraded {
   border-color: var(--amber);
-  background: rgba(255, 178, 62, 0.08);
+  background: rgb(var(--amber-rgb) / 8%);
 }
 .sys.degraded .sys-ico { stroke: var(--amber); }
 .sys.degraded .sys-state { color: var(--amber); }
 .sys.lost {
-  border-color: rgba(255, 77, 103, 0.5);
-  background: rgba(255, 77, 103, 0.09);
+  border-color: rgb(var(--red-rgb) / 50%);
+  background: rgb(var(--red-rgb) / 9%);
   opacity: 0.75;
 }
 .sys.lost .sys-ico { stroke: var(--red); }
@@ -179,7 +181,7 @@
  * knowing where it is going is what makes the pick a decision. */
 .sys.targeted {
   border-color: var(--red-b);
-  box-shadow: 0 0 0 1px rgba(255, 129, 152, 0.4), inset 0 0 22px -6px rgba(255, 77, 103, 0.6);
+  box-shadow: 0 0 0 1px rgb(var(--red-b-rgb) / 40%), inset 0 0 22px -6px rgb(var(--red-glow-rgb) / 60%);
 }
 .sys.targeted::after {
   content: 'TARGET';
@@ -192,7 +194,7 @@
   letter-spacing: 0.1em;
   padding: 2px 4px;
   background: var(--red);
-  color: #fff;
+  color: var(--on-signal);
   border-bottom-left-radius: 5px;
 }
 .sys.hit {
@@ -207,9 +209,9 @@
   animation: sys-saved 0.7s var(--ease) both;
 }
 @keyframes sys-saved {
-  0% { box-shadow: inset 0 0 0 0 rgba(51, 230, 174, 0); }
-  40% { box-shadow: inset 0 0 30px 0 rgba(51, 230, 174, 0.55); }
-  100% { box-shadow: inset 0 0 0 0 rgba(51, 230, 174, 0); }
+  0% { box-shadow: inset 0 0 0 0 rgb(var(--green-glow-rgb) / 0%); }
+  40% { box-shadow: inset 0 0 30px 0 rgb(var(--green-glow-rgb) / 55%); }
+  100% { box-shadow: inset 0 0 0 0 rgb(var(--green-glow-rgb) / 0%); }
 }
 
 /* ---------------------------------------------------------- board layout */
@@ -271,7 +273,7 @@
   padding: 15px 16px;
   border-radius: var(--r);
   border: 1px solid var(--line2);
-  background: linear-gradient(180deg, rgba(34, 22, 90, 0.6), rgba(25, 15, 58, 0.78));
+  background: linear-gradient(180deg, rgb(var(--panel2-rgb) / 60%), rgb(var(--panel-rgb) / 78%));
   margin-bottom: 12px;
   position: relative;
   overflow: hidden;
@@ -280,7 +282,7 @@
   content: '';
   position: absolute;
   inset: 0 auto 0 0;
-  width: 3px;
+  width: 4px;
   background: linear-gradient(180deg, var(--red), var(--brand));
 }
 .threat-top {
@@ -333,7 +335,7 @@
   height: 10px;
   border-radius: 3px;
   background: var(--brand);
-  box-shadow: 0 0 9px -1px rgba(139, 92, 246, 0.9);
+  box-shadow: 0 0 9px -1px rgb(var(--brand-glow-rgb) / 90%);
   transition: background 0.25s, box-shadow 0.25s;
 }
 .cap-pips i.spent {
@@ -348,7 +350,7 @@
   padding: 7px 12px;
   border-radius: 9px;
   border: 1px dashed var(--line2);
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--fill-1);
   color: var(--dim);
   font-family: var(--display);
   font-weight: 700;
@@ -371,11 +373,11 @@
   font-size: 10px;
   padding: 2px 5px;
   border-radius: 5px;
-  background: rgba(139, 92, 246, 0.18);
+  background: rgb(var(--brand-rgb) / 18%);
   color: var(--brand-b);
 }
 .ops-btn.free .cost {
-  background: rgba(51, 230, 174, 0.16);
+  background: rgb(var(--green-rgb) / 16%);
   color: var(--green-b);
 }
 
@@ -419,7 +421,7 @@
   padding: 13px 13px 12px;
   border-radius: var(--r);
   border: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012));
+  background: linear-gradient(180deg, var(--fill-2), var(--fill-1));
   color: var(--text);
   cursor: pointer;
   min-height: var(--tap);
@@ -430,13 +432,12 @@
   content: '';
   position: absolute;
   inset: 0 0 auto 0;
-  height: 2px;
+  height: 3px;
   background: var(--tone);
-  opacity: 0.6;
 }
 .pill:hover:not(:disabled) {
   border-color: var(--tone);
-  box-shadow: 0 12px 34px -18px var(--tone), inset 0 0 0 1px color-mix(in srgb, var(--tone) 30%, transparent);
+  box-shadow: 0 12px 34px -18px var(--tone), inset 0 0 0 1px rgb(var(--tone-rgb) / 30%);
   transform: translateY(-2px);
 }
 .pill:active:not(:disabled) {
@@ -505,7 +506,7 @@
   padding: 2px 5px;
   border-radius: 4px;
   background: var(--tone);
-  color: #0c0820;
+  color: var(--on-signal);
 }
 .pill.lead::after { content: 'LEAD'; }
 .pill.backup::after { content: 'BACKUP'; }
@@ -534,11 +535,11 @@
   margin-bottom: 7px;
 }
 .pill.flagged-weak .pill-flag {
-  background: rgba(255, 77, 103, 0.2);
+  background: rgb(var(--red-rgb) / 20%);
   color: var(--red-b);
 }
 .pill.flagged-best .pill-flag {
-  background: rgba(51, 230, 174, 0.18);
+  background: rgb(var(--green-rgb) / 18%);
   color: var(--green-b);
 }
 
@@ -548,7 +549,7 @@
   padding: 12px;
   border-radius: var(--r);
   border: 1px solid var(--line);
-  background: rgba(12, 8, 32, 0.45);
+  background: rgb(var(--bg-rgb) / 45%);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -572,7 +573,7 @@
   padding: 8px 10px;
   border-radius: 9px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.028);
+  background: var(--fill-1);
   animation: msg-in 0.34s var(--ease-out) both;
 }
 @keyframes msg-in {
@@ -594,14 +595,14 @@
   line-height: 1.4;
   color: var(--dim);
 }
-.msg.rising { border-color: rgba(255, 178, 62, 0.4); }
+.msg.rising { border-color: rgb(var(--amber-rgb) / 40%); }
 .msg.rising .from { color: var(--amber-b); }
-.msg.critical { border-color: rgba(255, 77, 103, 0.45); }
+.msg.critical { border-color: rgb(var(--red-rgb) / 45%); }
 .msg.critical .from { color: var(--red-b); }
 .msg.critical .text { color: var(--text); }
 .msg.foe {
-  border-color: rgba(255, 77, 103, 0.6);
-  background: rgba(58, 14, 26, 0.55);
+  border-color: rgb(var(--red-rgb) / 60%);
+  background: rgb(var(--red-deep-rgb) / 55%);
 }
 .msg.foe .from {
   color: var(--red-b);
@@ -630,8 +631,8 @@
   padding: 13px 14px;
   border-radius: var(--r);
   border: 1px solid var(--red);
-  background: linear-gradient(180deg, rgba(58, 14, 26, 0.96), rgba(20, 10, 44, 0.97));
-  box-shadow: 0 24px 60px -20px rgba(255, 77, 103, 0.8);
+  background: linear-gradient(180deg, rgb(var(--red-deep-rgb) / 96%), rgb(var(--bg2-rgb) / 97%));
+  box-shadow: 0 24px 60px -20px rgb(var(--red-glow-rgb) / 80%);
   animation: inject-in 0.26s var(--snap) both;
 }
 @keyframes inject-in {
@@ -651,13 +652,13 @@
 }
 .inject-row .btn {
   flex: 1;
-  background: linear-gradient(180deg, #ff6a80, #d8203f);
+  background: linear-gradient(180deg, var(--red-glow), var(--red));
   border-color: var(--red-b);
 }
 .inject-bar {
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgb(var(--red-rgb) / 18%);
   overflow: hidden;
   margin-top: 10px;
 }
@@ -688,7 +689,7 @@
   padding: 6px 11px;
   border-radius: 9px;
   border: 1px solid var(--tone);
-  background: color-mix(in srgb, var(--tone) 14%, transparent);
+  background: rgb(var(--tone-rgb) / 14%);
   animation: delta-in 0.34s var(--snap) both;
 }
 @keyframes delta-in {
@@ -710,7 +711,7 @@
   padding: 15px 16px;
   border-radius: var(--r);
   border: 1px solid var(--tone);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 12%, transparent), rgba(25, 15, 58, 0.7));
+  background: linear-gradient(180deg, rgb(var(--tone-rgb) / 12%), rgb(var(--panel-rgb) / 70%));
   margin-bottom: 12px;
 }
 .outcome-top {
@@ -749,8 +750,8 @@
   align-items: flex-start;
   padding: 11px 13px;
   border-radius: var(--r-sm);
-  border: 1px solid rgba(255, 77, 103, 0.45);
-  background: rgba(58, 14, 26, 0.4);
+  border: 1px solid rgb(var(--red-rgb) / 45%);
+  background: rgb(var(--red-deep-rgb) / 40%);
   margin-bottom: 13px;
 }
 .foe-line .who {
