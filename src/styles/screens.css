@@ -480,6 +480,17 @@
   line-height: 1.65;
   color: var(--red-b);
   box-shadow: 0 0 80px -20px rgba(255, 77, 103, 0.6);
+  /* The note is typed in as text with blank lines between paragraphs. Without
+     this they collapse to spaces and the whole thing lands as one block,
+     which is the one beat in the game that most needs to be readable. */
+  white-space: pre-wrap;
+}
+@media (max-width: 480px) {
+  .ransom {
+    padding: 14px;
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
 }
 .ransom .rn-head {
   font-family: var(--display);
@@ -487,6 +498,15 @@
   letter-spacing: 0.08em;
   color: #fff;
   margin-bottom: 12px;
+}
+/* The same panel, for the run where the business opened on time. */
+.ransom.held {
+  border-color: var(--green);
+  color: var(--green-b);
+  box-shadow: 0 0 80px -20px rgba(51, 230, 174, 0.5);
+}
+.climax .cx-label.held {
+  color: var(--green);
 }
 
 /* -------------------------------------------------------------- footer */

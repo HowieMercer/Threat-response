@@ -307,6 +307,7 @@ function leadForm(app, s) {
         consent: true,
       });
       Store.bump('leads');
+      Store.nameScore(s.seedCode, name.value);
       post('lead', record);
       app.audio.contained();
 

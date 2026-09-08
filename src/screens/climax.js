@@ -92,7 +92,8 @@ export function renderImpact(app, summary, onDone) {
   }, 'Continue');
 
   const overlay = h('div', { class: 'climax', role: 'dialog', 'aria-label': 'Aftermath' },
-    h('div', { class: 'cx-label' }, closed ? '07:40 — THE NEXT MORNING' : '06:12 — THE NEXT MORNING'),
+    h('div', { class: `cx-label${closed ? '' : ' held'}` },
+      closed ? '07:40 — THE NEXT MORNING' : '06:12 — THE NEXT MORNING'),
     body,
     h('div', { style: { marginTop: '20px' } }, skip)
   );
@@ -128,9 +129,7 @@ export function renderImpact(app, summary, onDone) {
   } else {
     app.audio.reveal();
     app.field.setMood('won');
-    body.style.borderColor = 'var(--green)';
-    body.style.color = 'var(--green-b)';
-    body.style.boxShadow = '0 0 80px -20px rgba(51,230,174,.5)';
+    body.classList.add('held');
     const line = h('div', null);
     body.append(h('div', { class: 'rn-head' }, 'INCIDENT CLOSED'), line);
     type(line, `${summary.client.survived}\n\nBlackVault moved on to a business with fewer layers.`, { cps: 60 });

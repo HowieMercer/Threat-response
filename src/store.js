@@ -70,6 +70,17 @@ export const Store = {
     return cache.leaderboard;
   },
 
+  /* The score is recorded when the run ends, which is before the player has
+   * given a name. This attaches one afterwards, matched on the run's own
+   * seed so a name can only ever land on the run that produced it. */
+  nameScore(seed, name) {
+    const row = cache.leaderboard.find((e) => e.seed === seed);
+    if (!row) return false;
+    row.name = String(name || '').trim().slice(0, 40) || null;
+    write(cache);
+    return true;
+  },
+
   get metrics() {
     return { ...cache.metrics };
   },

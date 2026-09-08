@@ -768,6 +768,11 @@
   color: var(--red-b);
   line-height: 1.45;
 }
+/* The stage's actions are over once it resolves. */
+.board.resolving .ops {
+  display: none;
+}
+
 .resolve-foot {
   display: flex;
   justify-content: center;

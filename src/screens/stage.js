@@ -259,6 +259,10 @@ export function createStageScreen(app) {
 
   /* --------------------------------------------------------- stage entry */
 
+  /* Named the same as the engine's private enterStage() and doing something
+   * different: this only re-renders from state. The engine's version is the
+   * one that advances capacity and sets the stage clock, and calling this
+   * does not and must not do either. */
   function enterStage() {
     resolving = false;
     closeInject();
