@@ -42,7 +42,9 @@ const WIDTHS = [
 const problems = [];
 const browser = await chromium.launch({
   executablePath: findChromium(),
-  args: ['--no-sandbox', '--disable-background-networking', '--disable-component-update',
+  args: ['--no-sandbox', '--disable-renderer-backgrounding',
+         '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling',
+         '--disable-background-networking', '--disable-component-update',
          '--disable-sync', '--no-first-run', '--metrics-recording-only',
          '--disable-features=OptimizationHints,MediaRouter,Translate'],
 });
@@ -65,6 +67,30 @@ for (const vp of WIDTHS) {
     await page.screenshot({ path: join(OUT, `${vp.name}-${n}.png`), fullPage: true });
     const r = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
     if (r.sw > r.cw + 1) problems.push(`${vp.name} ${n}: h-overflow ${r.sw}>${r.cw}`);
+
+    /* Page-level overflow is the easy half. The half that actually bites
+     * is content clipped INSIDE a panel with overflow:hidden — a flex item
+     * defaults to min-width:auto, so a sentence that cannot shrink runs
+     * off the end of its own card and the page never scrolls, so nothing
+     * upstream notices. That is how the one line booth staff read out loud
+     * shipped truncated at 375px. */
+    const clipped = await page.evaluate(() => {
+      const out = [];
+      for (const el of document.querySelectorAll('*')) {
+        if (el.scrollWidth - el.clientWidth <= 1) continue;
+        const cs = getComputedStyle(el);
+        if (cs.overflowX !== 'hidden' && cs.overflowX !== 'clip') continue;
+        /* text-overflow: ellipsis is a decision, not an accident: the text
+         * is truncated visibly and on purpose. Silent clipping is the bug
+         * this looks for. */
+        if (cs.textOverflow === 'ellipsis') continue;
+        /* A deliberately scrollable strip is not a bug. */
+        if (el.scrollWidth > el.clientWidth * 3) continue;
+        out.push(`${el.tagName.toLowerCase()}.${(el.className || '').toString().split(' ')[0]} by ${el.scrollWidth - el.clientWidth}px`);
+      }
+      return out.slice(0, 6);
+    });
+    for (const c of clipped) problems.push(`${vp.name} ${n}: clipped ${c}`);
   };
 
   await page.goto(URL_, { waitUntil: 'load' });

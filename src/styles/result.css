@@ -288,9 +288,16 @@
   margin-bottom: 12px;
   line-height: 1.5;
 }
+/* The opener, and the one line booth staff say out loud. It was being
+   clipped at 375px: a flex item defaults to min-width:auto, so the
+   sentence could not shrink below its own single-line width and ran off
+   the end of a panel with overflow:hidden on it — silently, because the
+   page itself never scrolled. The label wraps above the sentence when
+   there is no room for both. */
 .gap .g-opener {
   display: flex;
-  gap: 9px;
+  flex-wrap: wrap;
+  gap: 4px 9px;
   align-items: flex-start;
   font-size: 13.5px;
   color: var(--green-b);
@@ -298,6 +305,10 @@
 .gap .g-opener .label {
   flex: none;
   padding-top: 2px;
+}
+.gap .g-opener > span:not(.label) {
+  flex: 1 1 20ch;
+  min-width: 0;
 }
 
 /* --------------------------------------------------------- stage recap */
@@ -335,12 +346,15 @@
   color: var(--faint);
   margin-bottom: 2px;
 }
+/* Wraps rather than truncating. "Multi-Factor Authentication Request
+   Generation" came out as "Multi-Factor Authenticati..." at 375px, and
+   this is the one screen where the player reads back what actually
+   happened to them — a technique name they cannot finish reading is the
+   row's whole content lost to save eleven pixels of height. */
 .rc .rc-name {
   font-size: 13.5px;
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.3;
 }
 .rc .rc-picks {
   font-family: var(--mono);

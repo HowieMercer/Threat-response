@@ -73,6 +73,14 @@ const browser = await chromium.launch({
   executablePath: findChromium(),
   args: [
     '--no-sandbox',
+    /* Everything animated in this game is driven from one
+     * requestAnimationFrame loop, and a renderer Chromium decides is
+     * backgrounded stops firing it. With a dozen contexts opened and
+     * closed in sequence that happens intermittently, and the symptom is
+     * a check that passes twice and then reports a mechanic missing. */
+    '--disable-renderer-backgrounding',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-background-timer-throttling',
     '--disable-background-networking',
     '--disable-component-update',
     '--disable-domain-reliability',
@@ -306,6 +314,11 @@ async function playThrough(page, tag, { strategy, capture = false, allVariants =
       /* The dial's band ring: four arcs, exactly one at full strength. */
       dialBands: document.querySelectorAll('.dial .band').length,
       dialActive: document.querySelectorAll('.dial .band.on').length,
+      /* Every escalation channel back at rest — see calmDown() in main.js.
+       * A run that ends at depth 96 must not hand the result screen a red
+       * surface, and this is the screen that ends up in a deck. */
+      stageAttr: document.documentElement.getAttribute('data-stage'),
+      vignette: document.querySelector('.vignette')?.className || '',
     };
   });
 }
@@ -345,6 +358,8 @@ for (const vp of VIEWPORTS) {
     if (timed.dialBands !== 4 || timed.dialActive !== 1) {
       note(`${tag}: dial drew ${timed.dialBands} bands with ${timed.dialActive} active, expected 4 and 1`);
     }
+    if (timed.stageAttr) note(`${tag}: result screen still carrying data-stage=${timed.stageAttr}`);
+    if (/alert|crit|won/.test(timed.vignette)) note(`${tag}: result screen still carrying the ${timed.vignette} vignette`);
 
     await ctx.close();
 
@@ -363,6 +378,8 @@ for (const vp of VIEWPORTS) {
     if (weak.index !== 3) note(`${tag}: worst play scored ${weak.index}, expected 3`);
     if (weak.business !== 'closed') note(`${tag}: worst play left the business ${weak.business}, expected closed`);
     if (!weak.closureCopy) note(`${tag}: the closure line did not render on the result screen`);
+    if (weak.stageAttr) note(`${tag}: result screen still carrying data-stage=${weak.stageAttr} after a losing run`);
+    if (/alert|crit|won/.test(weak.vignette)) note(`${tag}: result screen still carrying the ${weak.vignette} vignette after a losing run`);
     await second.ctx.close();
   }
 }
@@ -377,8 +394,23 @@ for (const vp of VIEWPORTS) {
  */
 {
   const { ctx, page, tag } = await newPage({ name: 'inject', width: 1024, height: 768 });
+  /* newPage() has already loaded the file, so adding a fragment is a
+   * same-document navigation: nothing reloads, and the seed is read once
+   * at module load. Without the reload this ran on whatever random seed
+   * the page booted with, and reported the inject missing whenever that
+   * seed happened to draw one of the fourteen variants that has none. A
+   * seeded test that is not actually seeded is worse than no test. */
   await page.goto(FILE + '#22223', { waitUntil: 'load' });
+  await page.reload({ waitUntil: 'load' });
   await page.waitForTimeout(400);
+  const seeded = await page.evaluate(() => window.TR.S.seedCode);
+  if (seeded !== '22223') note(`inject: asked for run 22223, got ${seeded}`);
+  /* Learn mode, because the answer window is infinite there and every
+   * assertion below costs a round trip. In timed mode the five-second
+   * window can close between the wait and the read, and a harness that
+   * races a game clock reports failures no player would ever see. The UI,
+   * the focus behaviour and the keys are identical in both. */
+  await page.getByRole('button', { name: /MODE/ }).click();
   await page.getByRole('button', { name: /Start the incident/ }).click();
   await page.waitForTimeout(250);
   await page.getByRole('button', { name: /Set your readiness/ }).click();
@@ -387,13 +419,25 @@ for (const vp of VIEWPORTS) {
   await page.waitForTimeout(600);
 
   const scheduled = await page.evaluate(() => window.TR.S.variant.inject?.after ?? null);
+  if (await page.evaluate(() => window.TR.S.mode) !== 'learn') note('inject: learn mode did not take');
   if (scheduled === null) note('inject: seed 22223 no longer draws an inject at stage one');
 
   /* Put keyboard focus on a pillar card first. The inject must not take
    * it, and Space must still activate the card — the two failures that
    * made the inject and the decision mutually exclusive in v13. */
   await page.locator('.pill').first().focus();
-  await page.locator('.inject').waitFor({ state: 'visible', timeout: 6000 }).catch(() => {
+
+  /* Advance the stage clock from here rather than waiting on it. The
+   * inject is scheduled on time in the stage, and every assertion below
+   * costs a round trip, so waiting on real time meant racing the schedule
+   * with the harness's own latency — which reported failures no player
+   * would ever see, intermittently, which is worse than not testing it.
+   * The event still travels the real path: onto the engine's queue, and
+   * off it by the stage screen's own drain on the next frame. */
+  await page.evaluate(() => {
+    for (let i = 0; i < 40 && !window.TR.S.inject; i++) window.TR.game.tick(100);
+  });
+  await page.locator('.inject').waitFor({ state: 'visible', timeout: 4000 }).catch(() => {
     note('inject: never rendered');
   });
   const state = await page.evaluate(() => ({
@@ -514,33 +558,50 @@ for (const vp of VIEWPORTS) {
   await page.keyboard.press('Enter');
   await page.waitForTimeout(700);
 
+  /* Wait for a state rather than for a duration. A blind Enter on a
+   * schedule lands on whatever happens to be up, which is how a harness
+   * invents a failure no player would ever see — and the countdown before
+   * stage five and the aftermath after it are both full-screen overlays
+   * whose timing depends on how long a taunt takes to type. */
+  const KEY = { manage: '1', secure: '2', recover: '3' };
+  const phase = () => page.evaluate(() => window.TR.S.phase);
+  const waitFor = async (fn, label, limit = 60) => {
+    for (let i = 0; i < limit; i++) {
+      if (await fn()) return true;
+      await page.waitForTimeout(200);
+    }
+    note(`keyboard: timed out waiting for ${label}`);
+    return false;
+  };
+
   for (let s = 0; s < 5; s++) {
+    /* A .climax overlay may be up — the stage-five countdown. Its own
+     * control is autofocused, so Enter dismisses it. */
+    while (await page.locator('.climax .btn').count()) {
+      await page.keyboard.press('Enter');
+      if (!(await waitFor(async () => !(await page.locator('.climax .btn').count()), 'the overlay to close', 20))) break;
+    }
+    if (!(await waitFor(async () => (await phase()) === 'stage', `stage ${s + 1} to be live`, 30))) break;
+
     const lead = await page.evaluate(() => {
       const r = window.TR.S.variant.rank;
       return Object.keys(r).find((k) => r[k] === 'best');
     });
-    const key = { manage: '1', secure: '2', recover: '3' };
-    await page.keyboard.press(key[lead]);
-    await page.waitForTimeout(150);
+    await page.keyboard.press(KEY[lead]);
+    if (!(await waitFor(async () => !!(await page.evaluate(() => window.TR.S.lead)), 'the lead to commit', 20))) break;
     const backup = await page.evaluate((l) => window.TR.rightBackupFor(window.TR.S.variant, l), lead);
-    await page.keyboard.press(key[backup]);
-    await page.waitForTimeout(1100);
-    if (!(await page.locator('.resolve .btn.primary').count())) {
-      note(`keyboard: stage ${s + 1} did not resolve on keys alone`);
-      break;
-    }
+    await page.keyboard.press(KEY[backup]);
+    if (!(await waitFor(async () => !!(await page.locator('.resolve .btn.primary').count()), `stage ${s + 1} to resolve`, 30))) break;
     await page.keyboard.press('Enter');          // the resolve button is autofocused
-    await page.waitForTimeout(500);
-    if (await page.locator('.climax').count()) {
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
-    }
+    await page.waitForTimeout(400);
   }
-  await page.waitForTimeout(2600);
-  if (await page.locator('.climax').count()) {
+
+  /* The aftermath overlay, then the result screen. */
+  while (await page.locator('.climax .btn').count()) {
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(2000);
+    if (!(await waitFor(async () => !(await page.locator('.climax .btn').count()), 'the aftermath to close', 30))) break;
   }
+  await waitFor(async () => !!(await page.locator('.dial').count()), 'the result screen', 40);
   const out = await page.evaluate(() => ({
     phase: window.TR.S.phase,
     index: window.TR.summary().index,

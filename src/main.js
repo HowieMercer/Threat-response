@@ -94,38 +94,23 @@ const app = {
   render() {
     switch (game.state.phase) {
       case PHASE.ATTRACT:
-        Escalation.clear();
-        vignette('calm');
-        field.setMood('calm');
-        field.setDepth(0);
-        audio.setDepth(0);
+        calmDown();
         renderAttract(app);
         break;
       case PHASE.BRIEF:
-        Escalation.clear();
+        calmDown();
         renderBrief(app);
         break;
       case PHASE.POSTURE:
-        Escalation.clear();
+        calmDown();
         renderPosture(app);
         break;
       case PHASE.RESULT:
-        /* The result screen is the artifact that gets screenshotted into a
-         * deck. It sits at the calm end of the drift regardless of how the
-         * run went — the score says what happened, the page does not need
-         * to still be flushed red.
-         *
-         * All four have to be reset, not just the stage attribute. The
-         * vignette, the particle field and the drone are driven from the
-         * stage loop frame by frame and keep whatever state the loop left
-         * them in when it stopped, so a run that ended at depth 96 handed
-         * the result screen a red wash over every panel on it. Invisible
-         * on v13's near-black ground and impossible to miss on this one. */
-        Escalation.clear();
-        vignette('calm');
-        field.setMood('calm');
-        field.setDepth(0);
-        audio.setDepth(0);
+        /* The result screen is the artifact that gets screenshotted into
+         * a deck. It sits at the calm end of the drift regardless of how
+         * the run went — the score says what happened, the page does not
+         * need to still be flushed red. See calmDown(). */
+        calmDown();
         renderResult(app, game.summary());
         break;
       default:
@@ -157,7 +142,14 @@ const app = {
 
   /* Called from the resolve panel's continue button. Stage five hands off
    * to the impact beat rather than straight to the numbers. */
+  /* Both of these drive the live stage screen, so both have to no-op once
+   * it has been torn down. Two things can call them late: a booth player
+   * pressing Enter twice at the finale, and a countdown timer that fires
+   * after the overlay it belongs to was skipped. Either one used to throw
+   * on `stageScreen.enterStage()` and leave the run wedged, which is a
+   * crash the player caused by being quick. */
   advance() {
+    if (!stageScreen) return;
     if (game.state.stageIndex >= 4) {
       finishRun();
       return;
@@ -172,6 +164,7 @@ const app = {
   },
 
   enterClimaxStage() {
+    if (!stageScreen) return;
     game.climaxGo();
     game.drain();
     stageScreen.enterStage();
@@ -256,10 +249,34 @@ const app = {
   openStats: () => openStats(app),
 };
 
+/* Put every channel that carries escalation back to rest.
+ *
+ * There are four of them and they are driven from four different places:
+ * data-stage from the stage screen, and the vignette, the particle field
+ * and the audio drone from the stage loop, frame by frame. Stopping the
+ * loop leaves the last three holding whatever the final frame set, and
+ * nothing cleared data-stage on the path the game actually takes to the
+ * result screen — finishRun() renders it directly rather than through
+ * app.render(), so the reset sitting in render()'s RESULT branch never
+ * ran. A run that ended at intrusion depth 96 handed the result screen a
+ * warm red surface under every panel on it: invisible on v13's near-black
+ * ground, and on a near-white one it reads as a printing fault on the one
+ * screen that gets screenshotted into a deck.
+ *
+ * One function, called from teardown, so a fifth channel cannot be added
+ * and forgotten in only three of the five places. */
+function calmDown() {
+  Escalation.clear();
+  vignette('calm');
+  field.setMood('calm');
+  field.setDepth(0);
+  audio.setDepth(0);
+}
+
 function teardown() {
   if (stageScreen) stageScreen.stop();
   stageScreen = null;
-  vignette('calm');
+  calmDown();
 }
 
 function finishRun() {
