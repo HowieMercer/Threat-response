@@ -39,13 +39,27 @@ export const qsa = (sel, root = document) => [...root.querySelectorAll(sel)];
 /* Screen swap. Replaces the whole wrap contents and moves focus to the
  * new screen's heading, which is what makes the game completable with a
  * keyboard and announceable with a screen reader. */
+
+/* Things the browser already puts in the tab order. Anything else needs a
+ * tabindex before .focus() will take, and giving one to something in this
+ * list takes it OUT of the tab order — which is the bug below. */
+const FOCUSABLE = 'button, a[href], input, select, textarea, [tabindex], [contenteditable]';
+
 export function mount(node, { focus = true } = {}) {
   const wrap = qs('.wrap');
   wrap.replaceChildren(node);
   if (focus) {
     const target = node.querySelector('[data-autofocus]') || node.querySelector('h1, h2');
     if (target) {
-      if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+      /* Only a heading needs the tabindex. Every screen's autofocus target
+       * is its primary button, and setting tabindex="-1" on a button
+       * focuses it once and then removes it from the tab order for good —
+       * so a keyboard player who tabbed away from "Begin the attack" to
+       * choose a readiness card could never tab back to it. Programmatic
+       * focus works either way, which is exactly why this survived: the
+       * screen looked correct the moment it appeared, and only broke for
+       * the player who then used the keyboard for anything. */
+      if (!target.matches(FOCUSABLE)) target.setAttribute('tabindex', '-1');
       target.focus({ preventScroll: true });
     }
   }

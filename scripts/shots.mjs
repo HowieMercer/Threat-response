@@ -11,6 +11,13 @@ const FILE = 'file://' + join(HERE, '..', 'dist', 'index.html');
 const OUT = process.argv[2] || join(HERE, '..', 'docs', 'shots', 'v14');
 mkdirSync(OUT, { recursive: true });
 
+/* The theme is a URL override, which is the whole mechanism — see
+ * render/theme.js. Passing it here is what makes the dark theme something
+ * that gets looked at rather than something that is asserted to exist. */
+const themeArg = process.argv[process.argv.indexOf('--theme') + 1];
+const THEME = themeArg === 'dark' ? 'dark' : 'light';
+const URL_ = FILE + (THEME === 'dark' ? '?theme=dark' : '');
+
 function findChromium() {
   if (process.env.CHROMIUM_PATH) return process.env.CHROMIUM_PATH;
   const root = process.env.PLAYWRIGHT_BROWSERS_PATH;
@@ -60,8 +67,10 @@ for (const vp of WIDTHS) {
     if (r.sw > r.cw + 1) problems.push(`${vp.name} ${n}: h-overflow ${r.sw}>${r.cw}`);
   };
 
-  await page.goto(FILE, { waitUntil: 'load' });
+  await page.goto(URL_, { waitUntil: 'load' });
   await page.waitForTimeout(450);
+  const applied = await page.evaluate(() => document.documentElement.getAttribute('data-theme') || 'light');
+  if (applied !== THEME) problems.push(`${vp.name}: asked for ${THEME}, got ${applied}`);
   await shot('01-attract');
 
   await page.getByRole('button', { name: /Start the incident/ }).click();

@@ -456,6 +456,102 @@ for (const vp of VIEWPORTS) {
   await ctx.close();
 }
 
+/* ────────────────────────────────────────────────── keyboard only
+ *
+ * The quality floor says the whole game is completable without a mouse,
+ * and until now that was asserted rather than measured. No click() calls
+ * below: every transition is a key, and the run has to reach the result
+ * screen with a real score on it.
+ */
+{
+  const { ctx, page, tag } = await newPage({ name: 'keyboard', width: 1280, height: 800 });
+  const focused = () =>
+    page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return null;
+      return { cls: el.className, text: (el.textContent || '').trim().slice(0, 44) };
+    });
+
+  /* Every screen autofocuses its primary control on mount, so the happy
+   * path is Enter. Reaching anything else means walking BACKWARDS with
+   * Shift+Tab: the primary sits late in the DOM, and tabbing forward past
+   * the last focusable hands focus to the browser chrome and never gets
+   * it back, which is a property of the harness and not of the page. */
+  await page.keyboard.press('Enter');            // Start the incident
+  await page.waitForTimeout(320);
+  const onBrief = await focused();
+  if (!onBrief || !/Set your readiness/.test(onBrief.text)) {
+    note(`keyboard: briefing did not autofocus its primary (${onBrief?.text ?? 'nothing focused'})`);
+  }
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(320);
+
+  /* Spend the budget from the readiness board. */
+  let spent = 0;
+  let back = 0;
+  for (let i = 0; i < 16 && spent < 2; i++) {
+    await page.keyboard.press('Shift+Tab');
+    back++;
+    const f = await focused();
+    if (f && /pcard/.test(f.cls) && !/locked/.test(f.cls)) {
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(110);
+      spent = await page.evaluate(() => window.TR.S.posture.spent);
+    }
+  }
+  if (spent < 2) note(`keyboard: spent only ${spent} readiness points from the board`);
+  /* And forward again to the primary, which is the walk that proves it is
+   * still in the tab order after mount() focused it. */
+  let onStart = null;
+  for (let i = 0; i < back + 2; i++) {
+    await page.keyboard.press('Tab');
+    onStart = await focused();
+    if (onStart && /btn primary/.test(onStart.cls)) break;
+  }
+  if (!onStart || !/btn primary/.test(onStart.cls)) {
+    note(`keyboard: could not walk back to begin-the-attack (${onStart?.text ?? 'nothing focused'})`);
+  }
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(700);
+
+  for (let s = 0; s < 5; s++) {
+    const lead = await page.evaluate(() => {
+      const r = window.TR.S.variant.rank;
+      return Object.keys(r).find((k) => r[k] === 'best');
+    });
+    const key = { manage: '1', secure: '2', recover: '3' };
+    await page.keyboard.press(key[lead]);
+    await page.waitForTimeout(150);
+    const backup = await page.evaluate((l) => window.TR.rightBackupFor(window.TR.S.variant, l), lead);
+    await page.keyboard.press(key[backup]);
+    await page.waitForTimeout(1100);
+    if (!(await page.locator('.resolve .btn.primary').count())) {
+      note(`keyboard: stage ${s + 1} did not resolve on keys alone`);
+      break;
+    }
+    await page.keyboard.press('Enter');          // the resolve button is autofocused
+    await page.waitForTimeout(500);
+    if (await page.locator('.climax').count()) {
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(500);
+    }
+  }
+  await page.waitForTimeout(2600);
+  if (await page.locator('.climax').count()) {
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(2000);
+  }
+  const out = await page.evaluate(() => ({
+    phase: window.TR.S.phase,
+    index: window.TR.summary().index,
+    dialVisible: !!document.querySelector('.dial'),
+  }));
+  if (out.phase !== 'result' || !out.dialVisible) note(`keyboard: run ended in phase ${out.phase}`);
+  if (out.index !== 100) note(`keyboard: expert play on keys alone scored ${out.index}, expected 100`);
+  console.log(`${tag.padEnd(20)} full run on keys alone, ${spent} readiness points spent, index ${out.index}`);
+  await ctx.close();
+}
+
 await browser.close();
 
 console.log(`\n${problems.length} problem${problems.length === 1 ? '' : 's'}`);

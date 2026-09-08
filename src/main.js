@@ -44,7 +44,11 @@ const audio = createAudio();
  * stages. Cheapest possible competitive feature for a stand: two people
  * can be given the same run and compared honestly. */
 function seedFromUrl() {
-  const raw = (location.hash || '').replace(/^#/, '').trim();
+  /* Split on the comma first. The fragment can carry a theme as well —
+   * #ABCDE,dark — and decodeSeed strips everything that is not a base-36
+   * digit, so the whole fragment went in as ABCDEDARK and quietly played
+   * a different run than the one the link named. */
+  const raw = (location.hash || '').replace(/^#/, '').split(',')[0].trim();
   return raw ? decodeSeed(raw) : null;
 }
 
@@ -335,7 +339,22 @@ window.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Enter') {
     /* Enter presses the primary action on whatever screen is up, so the
-     * whole game is completable without a mouse. */
+     * whole game is completable without a mouse — but only when nothing
+     * else has claimed the key.
+     *
+     * Without the guard below this handler made the readiness board
+     * unusable from a keyboard, which is the worst screen in the game to
+     * lose: tab to a capability, press Enter, and instead of buying it you
+     * began the attack having bought nothing. preventDefault() cancelled
+     * the card's own activation on the way past. The same was true of the
+     * client cards on the attract screen and the role buttons on the lead
+     * form. Space still worked on all of them, which is why every manual
+     * pass missed it, and the automated pass did not exist until now.
+     *
+     * If something activatable has focus, Enter is that control's. This
+     * fallback is only for a screen where focus is nowhere in particular. */
+    const el = document.activeElement;
+    if (el && el !== document.body && el.closest('button, a[href], select, [role="button"]')) return;
     const btn = qs('.wrap .btn.primary') || document.querySelector('.climax .btn');
     if (btn) {
       e.preventDefault();
