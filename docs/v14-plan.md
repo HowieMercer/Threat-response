@@ -303,46 +303,65 @@ against.
 Both columns are the same harness at 40,000 runs, quoted from
 `docs/balance/monte-carlo-v13.txt` and `docs/balance/monte-carlo-v14.txt`
 so every figure here can be checked against the file it came from. The v13
-column needed three one-line shims to run against v13's API, listed at the
-top of that file's commit.
+column needed three one-line shims to read `revealed.weak` instead of
+`revealed.partial`; nothing else about the harness differs between them.
 
 | | v13 | v14 |
 |---|---|---|
-| blind reaches Threat Hunter | 21.2% | **38.5%** (band 35–45) |
-| longest-act heuristic vs blind | **+78.8** | −6.1 |
-| most-commas heuristic vs blind | **+52.3** | +0.1 |
-| scan-and-guess vs blind | **+28.1** | −2.4 |
-| knowledge worth (semi-informed vs blind) | +16.9 | **+18.4** |
-| best single pillar vs blind | +4.7 | +7.8 |
-| strongest two-card build, Champion | 0.8% | 1.2% |
+| blind reaches Threat Hunter | 20.8% | **36.8%** (band 35–45) |
+| longest-act heuristic vs blind | **+79.2** | −3.5 |
+| most-commas heuristic vs blind | **+51.4** | +1.6 |
+| scan's worth to a knowledge-free player | **+1.79 defense points** | −0.03 |
+| the same, on the rank ladder | **+29.2** | −0.1 |
+| knowledge worth (semi-informed vs blind) | +17.0 | **+20.9** |
+| best single pillar vs blind | +6.0 | +9.4 |
+| strongest two-card build, Champion | 0.8% | 1.0% |
 | readiness cards that are live choices | 3 of 6 | **6 of 6** |
-| harness checks passing | 9 of 15 | **15 of 15** |
+| harness checks passing | 9 of 16 | **16 of 16** |
 | colour literals outside tokens.css | 128 | **0** |
 | built file | 222,273 B | 241,676 B (+8.7%) |
 
-Two of those deserve a note. **Blind play moved from 21.2% to 38.5%
-without the answer key getting easier** — it moved because the Threat
-Hunter line sits at 6 defense points rather than 7, and where that line
-sits is what decides the number (the lever table is in both reports).
-What protects the score from a knowledge-free player is the pool, and
-that is the row underneath: knowledge is worth +18.4 points now, against
-+16.9 when three separate heuristics could beat it outright.
+Four of those need a note.
 
-And **the single-pillar figure went up, +4.7 to +7.8**, which looks like a
-regression and is not one. The lead-pick quality table in both reports
-shows "always Secure" picking identically in the two versions — 34.5 /
-40.4 / 25.1 in v13 against 34.7 / 40.0 / 25.3 in v14 — so the pool did
-not change for it. What changed is the sensitivity of the metric: the
-defense-point distribution is densest between 4 and 6, so a given
-advantage moves more mass across a line at 6 than across a line at 7. The
-same strategy, the same pool, a more sensitive ruler.
+**Blind play moved from 20.8% to 36.8% without the answer key getting
+easier.** It moved because the Threat Hunter line sits at 6 defense points
+rather than 7, and where that line sits is what decides the number — the
+lever table is in both reports. What protects the score from a
+knowledge-free player is the pool, and that is the row two below: knowledge
+is worth +20.9 points now, against +17.0 when three separate heuristics
+could beat it outright.
 
-The underlying pool property is worth naming though, because it is the
-one thing in the answer key I would still want a second opinion on:
-**Secure is the weakest layer in only a quarter of the pool** rather than
-a third, so "always lead with detection" avoids the pick that breaches
-more often than chance. It is inside every bound the tests enforce (no
-pillar is `best` in more than 45% or less than 20% of the pool, and none
-is `weak` in all four variants of a stage) and it is arguably true to
-life. But it is the reason one pillar beats blind by nearly eight points,
-and if a future content pass adds variants it is the number to watch.
+**The scan row is measured in expected defense points, not in Hunter+, and
+that is deliberate.** Hunter+ is a threshold count, so it responds to
+variance as well as to the mean: taking the partial layer every time scores
+a flat 5 points a run and therefore never crosses a line drawn at 6, while a
+blind flip with the identical mean sometimes does. That strategy sits about
+five points of Hunter+ below blind for that reason alone, permanently, and
+an earlier two-sided check on Hunter+ read the arithmetic being right as the
+arithmetic being broken. The claim is about expected value, so the
+measurement is too. The exploit direction is still checked on the ladder,
+one-sided, because that is the number a rank actually reads.
+
+**+1.79 defense points out of 10** is what v13's scan was worth to someone
+who pressed S and then guessed. That is an 18% swing on the metric the rank
+ladder reads, from no knowledge at all, and it is the clearest single number
+in this comparison.
+
+**The single-pillar figure went up, +6.0 to +9.4**, which looks like a
+regression and is not one. The lead-pick quality table in both reports shows
+"always Secure" picking identically in the two versions — 35.1 / 39.7 / 25.2
+in v13 against 34.3 / 40.7 / 25.0 in v14 — so the pool did not change for
+it. What changed is the sensitivity of the metric: the defense-point
+distribution is densest between 4 and 6, so a given advantage moves more
+mass across a line at 6 than across a line at 7. The same strategy, the same
+pool, a more sensitive ruler.
+
+The underlying pool property is worth naming though, because it is the one
+thing in the answer key I would still want a second opinion on: **Secure is
+the weakest layer in only a quarter of the pool** rather than a third, so
+"always lead with detection" avoids the pick that breaches more often than
+chance. It is inside every bound the tests enforce (no pillar is `best` in
+more than 45% or less than 20% of the pool, and none is `weak` in all four
+variants of a stage) and it is arguably true to life. But it is the reason
+one pillar beats blind by nine points, and if a future content pass adds
+variants it is the number to watch.

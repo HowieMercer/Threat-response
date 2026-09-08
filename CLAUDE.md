@@ -38,7 +38,7 @@ npm run shots <dir>      # every screen state at four widths, --theme dark
 ```
 
 Run `npm run balance` after **any** change to `src/data/scenarios.json`,
-`postures.json`, the ranks, the scoring or the injects. It prints fifteen
+`postures.json`, the ranks, the scoring or the injects. It prints sixteen
 checks and exits non-zero on any of them. A drift of a few points is noise; a
 strategy moving ten points means the answer key changed shape.
 

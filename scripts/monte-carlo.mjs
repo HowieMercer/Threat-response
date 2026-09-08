@@ -432,14 +432,29 @@ const checks = [
    byName['most commas in act'].hunter - blind.hunter < 10,
    `+${(byName['most commas in act'].hunter - blind.hunter).toFixed(1)}`],
   /* The scan must be worth nothing to a player who cannot reason about the
-   * technique, and worth it in both directions: ruling the partial out and
-   * taking it have to land on the same number as a blind flip. */
-  ['scan gains a knowledge-free player nothing (ruling the partial out)',
-   Math.abs(byName['scan then guess'].hunter - blind.hunter) < 6,
-   `${sign(byName['scan then guess'].hunter - blind.hunter)} vs blind`],
-  ['scan gains a knowledge-free player nothing (taking the partial)',
-   Math.abs(byName['scan then take it'].hunter - blind.hunter) < 6,
-   `${sign(byName['scan then take it'].hunter - blind.hunter)} vs blind`],
+   * technique, in both directions: ruling the partial out and taking it are
+   * both worth exactly 1.0 defense points a stage, the same as a blind flip.
+   *
+   * Measured on expected defense points, not on Hunter+, and the difference
+   * matters. Hunter+ is a threshold count, so it is sensitive to variance as
+   * well as to the mean: taking the partial every time scores a flat 5 points
+   * a run and therefore never reaches a line drawn at 6, while a blind flip
+   * with the same mean sometimes does. That strategy sits about six points of
+   * Hunter+ BELOW blind for that reason alone, permanently, and an earlier
+   * two-sided check on Hunter+ read the arithmetic being correct as the
+   * arithmetic being broken. The claim is about expected value, so the check
+   * is too — and the exploit direction is still checked on Hunter+, one-sided,
+   * because that is the number the rank ladder actually reads. */
+  ['scan gains no expected points, ruling the partial out',
+   Math.abs(byName['scan then guess'].defense - blind.defense) < 0.4,
+   `${sign(byName['scan then guess'].defense - blind.defense, 2)} defense pts vs blind`],
+  ['scan gains no expected points, taking the partial',
+   Math.abs(byName['scan then take it'].defense - blind.defense) < 0.4,
+   `${sign(byName['scan then take it'].defense - blind.defense, 2)} defense pts vs blind`],
+  ['neither use of a scan beats blind on the rank ladder',
+   byName['scan then guess'].hunter - blind.hunter < 6 &&
+   byName['scan then take it'].hunter - blind.hunter < 6,
+   `${sign(byName['scan then guess'].hunter - blind.hunter)} / ${sign(byName['scan then take it'].hunter - blind.hunter)}`],
   /* Reachability is a property of the ladder, not of blind play — blind
    * Champion is meant to be near-impossible, so testing it empirically at
    * this sample size measured noise. Checked across every strategy in the

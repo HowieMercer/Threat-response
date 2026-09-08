@@ -28,22 +28,34 @@ a USB stick. There is nothing else to deploy.
 ## Verify before you ship
 
 ```bash
-npm test         # engine, scenario integrity, QR round-trip  (47 tests)
-npm run verify   # headless playthroughs + layout audit       (needs a build)
-npm run balance  # Monte Carlo answer-key and strategy report
+npm test          # engine, scenario integrity, QR round-trip  (63 tests)
+npm run verify    # headless playthroughs + layout audit       (needs a build)
+npm run balance   # Monte Carlo answer-key and strategy report
+npm run contrast  # WCAG audit of the token layer
+npm run shots <dir>   # every screen state at four widths, --theme dark
 ```
 
 `npm run verify` is the one that catches what reading the source cannot: it
 fails the run on **any** request that is not `file:`, `data:` or `blob:`,
 plays the game to completion at four viewports in both timed and learn mode,
 checks for horizontal page scroll and undersized tap targets, confirms the
-pillar cards are reachable without scrolling on a phone, and confirms
-`prefers-reduced-motion` actually suppresses what it claims to. Add `--shots`
-to write screenshots to `tests/shots/`.
+pillar cards are reachable without scrolling on a phone, confirms
+`prefers-reduced-motion` actually suppresses what it claims to, answers a
+live inject and checks it took no focus from the pillar cards, lets a stage
+time out and checks it resolves, and plays one complete run **using nothing
+but the keyboard**. That last one found two bugs the day it was written. Add
+`--shots` to write screenshots to `tests/shots/`.
 
 `npm run balance` answers the question that decides whether the score means
-anything: can somebody with no security knowledge reach a high rank? Run it
-after every change to `src/data/scenarios.json`.
+anything: can somebody with no security knowledge reach a high rank? It
+prints sixteen checks and exits non-zero on any of them. Run it after every
+change to the scenarios, the readiness cards, the ranks, the scoring or the
+injects. The reference reports are in `docs/balance/`.
+
+`npm run contrast` walks `src/styles/tokens.css`, resolves every token in
+every theme and stage state, and fails on any pair the UI actually uses that
+misses its WCAG threshold. It also fails on a colour literal written anywhere
+outside that file.
 
 ## What is where
 
@@ -54,6 +66,9 @@ after every change to `src/data/scenarios.json`.
 | `src/screens/` | One module per screen. |
 | `src/ui/qr.js` | QR encoder, in-file, because a CDN script would break the offline constraint. |
 | `src/config.js` | `VERSION`, the storage key, per-event defaults. |
+| `src/styles/tokens.css` | Every colour in the build, declared once. Three brand anchors at the top are the swap point. |
+| `scripts/` | The Monte Carlo, the contrast audit, the screenshot harness. |
+| `docs/balance/` | Reference reports, so a claim about the balance can be checked rather than believed. |
 | `CLAUDE.md` | The constraints, the scenario schema, and why things are the way they are. Read this before changing anything. |
 | `NOTES.md` | Open items that need a decision rather than a patch. |
 
@@ -67,9 +82,13 @@ Adding a scenario means editing one JSON file. The schema is documented in
   **?** the rules. The whole game is completable without a mouse.
 - **Learn mode** removes the clock. The decisions and the answer key are
   identical.
-- Runs are seeded. The five-character run code on the result screen replays
-  the identical five stages — put it in the URL as `#CODE`. Useful for a
-  fair head-to-head at a stand, and for reproducing a bug.
+- Runs are seeded. The run code on the result screen replays the identical
+  five stages: type it into the run-code field on the start screen, use the
+  copy-link button, or put it in the URL as `#CODE`. Useful for a fair
+  head-to-head at a stand, and for reproducing a bug.
+- **Light theme by default.** The dark one is still there — `?theme=dark`,
+  `#CODE,dark`, or **T** — and the climax inverts to the dark ground for
+  everybody, which is the one moment the whole thing goes black.
 
 ## Per-event configuration
 
