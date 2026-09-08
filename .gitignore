@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+
+# The original single-file versions are deliberately NOT ignored.
+# They are the only record of what the game looked like before the split,
+# and they are small. Keep them committed.

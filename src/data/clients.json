@@ -1,0 +1,129 @@
+{
+  "_schema": {
+    "note": "The business being defended. Concrete detail only — staff counts and years trading do more work than any adjective, and they are what makes the closing line land.",
+    "fields": {
+      "id": "slug",
+      "name": "trading name",
+      "profile": "one line, factual. Staff, infrastructure, whether they have IT.",
+      "years": "years trading. Used verbatim in the closure line, so it has to be a number.",
+      "sector": "shown in the HUD",
+      "stake": "what this business cannot operate without. One noun phrase.",
+      "comms": "inbound messages during a stage, by pressure band. 'from' is a role, never a named person — the player is the one with the name.",
+      "survived": "shown on the result screen when the business stays open",
+      "closed": "shown when it does not. This is the emotional peak of the whole asset. Do not make it longer."
+    }
+  },
+
+  "default": "harbour-dental",
+
+  "clients": [
+    {
+      "id": "harbour-dental",
+      "name": "Harbour Dental",
+      "profile": "38 staff, one on-site server, no in-house IT",
+      "years": 32,
+      "sector": "Dental practice",
+      "stake": "patient records and the appointment book",
+      "comms": {
+        "calm": [
+          { "from": "Reception", "text": "The system is slow this morning. Is someone doing an update?" },
+          { "from": "Practice manager", "text": "We have 41 appointments booked today. Do I need to start calling people?" },
+          { "from": "Hygienist", "text": "My login is asking for a code it has never asked for before." }
+        ],
+        "rising": [
+          { "from": "Reception", "text": "I cannot open any patient files. There are six people in the waiting room." },
+          { "from": "Practice manager", "text": "The X-ray software says the server is unreachable. We cannot treat anyone without notes." },
+          { "from": "Practice owner", "text": "Tell me honestly. Is this the kind of thing that ends a business?" }
+        ],
+        "critical": [
+          { "from": "Practice manager", "text": "We are sending patients home. Thirty-one years and we have never done that." },
+          { "from": "Reception", "text": "Every file on the shared drive has the same new extension." },
+          { "from": "Practice owner", "text": "There is a message on the screen asking for money. What do I tell the staff?" }
+        ]
+      },
+      "survived": "Harbour Dental opened on time the next morning. The practice owner never had to tell the staff anything.",
+      "closed": "Harbour Dental closed after 32 years."
+    },
+    {
+      "id": "meridian-logistics",
+      "name": "Meridian Logistics",
+      "profile": "120 staff, four regional depots, 60 vehicles on the road",
+      "years": 19,
+      "sector": "Freight and distribution",
+      "stake": "the routing system and the customs paperwork",
+      "comms": {
+        "calm": [
+          { "from": "Depot 2", "text": "Handheld scanners are dropping their connection every few minutes." },
+          { "from": "Transport manager", "text": "Routing is taking twenty seconds to return a job. It is normally instant." },
+          { "from": "Night shift", "text": "Someone signed into the depot console at 04:00. Nobody was on site." }
+        ],
+        "rising": [
+          { "from": "Transport manager", "text": "Sixty drivers have no manifests. I am holding them in the yards." },
+          { "from": "Customs desk", "text": "We cannot produce paperwork for the 14:00 crossing. That load is perishable." },
+          { "from": "Managing director", "text": "Two of our four largest customers have called. What am I allowed to tell them?" }
+        ],
+        "critical": [
+          { "from": "Depot 4", "text": "Nothing here works. We are writing manifests out by hand." },
+          { "from": "Customs desk", "text": "Three loads have been refused at the border for missing documentation." },
+          { "from": "Managing director", "text": "Our biggest contract has a continuity clause. They are asking me to certify we are operating." }
+        ]
+      },
+      "survived": "Meridian ran a full schedule the following day. The continuity clause was never invoked.",
+      "closed": "Meridian Logistics lost its two largest contracts and wound down within the year."
+    },
+    {
+      "id": "lark-finch",
+      "name": "Lark & Finch",
+      "profile": "24-person accountancy, nine days from the filing deadline",
+      "years": 41,
+      "sector": "Accountancy",
+      "stake": "800 client filings and the working papers behind them",
+      "comms": {
+        "calm": [
+          { "from": "Senior partner", "text": "Practice software is asking me to reauthenticate. Twice this morning." },
+          { "from": "Tax team", "text": "The document store is not showing this year's folders. Is it indexing?" },
+          { "from": "Reception", "text": "A client called about an invoice from us with different bank details." }
+        ],
+        "rising": [
+          { "from": "Tax team", "text": "Working papers for 200 clients will not open. The deadline is nine days out." },
+          { "from": "Senior partner", "text": "We hold every client's financial position in there. Is any of it out?" },
+          { "from": "Compliance", "text": "If client data has left the building we have 72 hours to notify. I need to know now." }
+        ],
+        "critical": [
+          { "from": "Senior partner", "text": "Eight hundred filings. Nine days. I cannot see a way through this." },
+          { "from": "Compliance", "text": "There is a sample of client data on a leak site. It is real." },
+          { "from": "Tax team", "text": "Clients are asking whether they should engage someone else for the deadline." }
+        ]
+      },
+      "survived": "Lark & Finch filed every return on time. No client was ever notified of a breach, because there was nothing to notify.",
+      "closed": "Lark & Finch missed the deadline for 340 clients and closed after 41 years."
+    },
+    {
+      "id": "brightwell-surgery",
+      "name": "Brightwell Surgery",
+      "profile": "GP practice serving 9,000 patients, two part-time IT days a month",
+      "years": 27,
+      "sector": "Primary care",
+      "stake": "9,000 patient records and the prescribing system",
+      "comms": {
+        "calm": [
+          { "from": "Reception", "text": "The booking system has logged everyone out twice this morning." },
+          { "from": "Practice nurse", "text": "Prescribing is timing out when I try to sign anything." },
+          { "from": "Practice manager", "text": "We had an email about a mandatory update. It came from our own domain." }
+        ],
+        "rising": [
+          { "from": "Duty GP", "text": "I have a patient in front of me and no history. I need to know what they are on." },
+          { "from": "Practice manager", "text": "Nine thousand records. I have to tell someone if those are gone." },
+          { "from": "Reception", "text": "The out-of-hours service is asking us to divert. We have no way to send notes." }
+        ],
+        "critical": [
+          { "from": "Duty GP", "text": "We are prescribing from memory and patient report. That is not safe and I am recording it." },
+          { "from": "Practice manager", "text": "The regional team have been told. This is a notifiable incident now." },
+          { "from": "Reception", "text": "There is a countdown on the reception screen. Patients can see it." }
+        ]
+      },
+      "survived": "Brightwell held clinic the next morning with full records. The incident was closed without a patient safety report.",
+      "closed": "Brightwell Surgery's list was dispersed to neighbouring practices after 27 years."
+    }
+  ]
+}

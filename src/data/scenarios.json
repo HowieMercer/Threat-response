@@ -1,0 +1,479 @@
+{
+  "_schema": {
+    "note": "Content only. No logic, no code, no numbers the engine has to interpret beyond the enums below. Someone on the security team should be able to add a variant here without opening a .js file.",
+    "stage": {
+      "id": "slug, used in the recap and the CSV",
+      "name": "shown in the HUD as the phase name",
+      "threat": "threat level word shown in the HUD",
+      "seconds": "how long the intrusion track takes to cross the board at this stage",
+      "variants": "four per stage. One is drawn at random per run, so a stage of four gives 4^5 = 1,024 unique runs."
+    },
+    "variant": {
+      "tech": "real MITRE ATT&CK technique ID. Never invent one.",
+      "ta": "real ATT&CK tactic name for that technique. Never paraphrase it.",
+      "name": "the technique's own name, or a plain-language name for what is happening",
+      "desc": "the situation, in two sentences. Concrete over dramatic.",
+      "target": "which estate system this attack is reaching for: endpoints | fileserver | identity | cloud | databases | backups",
+      "rank": "exactly one 'best', one 'partial', one 'weak' across manage/secure/recover",
+      "act": "what each pillar's card offers to DO here. Written as an order, not a product name.",
+      "fb": "why that choice landed the way it did. Explains the reasoning, never just right or wrong.",
+      "inject": "optional. A live inject that fires mid-stage: { at, seconds, label, action, ok, miss }. 'at' is intrusion depth 0-100."
+    },
+    "answerKeyRule": "Every pillar must be 'best' at least once at every stage position. If a player can win by pattern-matching stage number, the score stops being a diagnostic and a security professional will notice within two runs."
+  },
+
+  "stages": [
+    {
+      "id": "access",
+      "name": "Access",
+      "threat": "Elevated",
+      "seconds": 20,
+      "variants": [
+        {
+          "tech": "T1190",
+          "ta": "Initial Access",
+          "name": "Exploit Public-Facing Application",
+          "desc": "The perimeter VPN appliance is three firmware revisions behind. A working exploit for that version is being sold openly, and the appliance is answering from the internet right now.",
+          "target": "identity",
+          "rank": { "manage": "best", "secure": "partial", "recover": "weak" },
+          "act": {
+            "manage": "Pull the appliance's exposure and push the pending firmware",
+            "secure": "Watch the appliance for exploitation attempts and contain on hit",
+            "recover": "Verify the restore points are current before anything lands"
+          },
+          "fb": {
+            "manage": "Contained. The exposure was the attack — closing it removed the technique from the board rather than waiting to detect it being used.",
+            "secure": "Mitigated. You will see the attempt, but you are detecting a door you could have shut. Detection buys minutes; patching buys the whole stage.",
+            "recover": "Breached. A clean restore point does not close an open door. The appliance answered, and BlackVault walked through it."
+          },
+          "inject": {
+            "at": 55,
+            "seconds": 5,
+            "label": "Appliance is dialling out to an unknown host",
+            "action": "Sever the tunnel",
+            "ok": "Tunnel cut before the second-stage payload finished pulling.",
+            "miss": "Second stage pulled in full. The attacker no longer needs the exploit."
+          }
+        },
+        {
+          "tech": "T1566.001",
+          "ta": "Initial Access",
+          "name": "Spearphishing Attachment",
+          "desc": "A macro-enabled invoice reached eleven mailboxes, addressed by name and referencing a real purchase order. Two people have already opened it.",
+          "target": "endpoints",
+          "rank": { "manage": "partial", "secure": "best", "recover": "weak" },
+          "act": {
+            "manage": "Push a macro-blocking policy across the estate",
+            "secure": "Contain both endpoints and hunt the payload's behaviour",
+            "recover": "Restore the two machines from this morning's image"
+          },
+          "fb": {
+            "manage": "Mitigated. The policy protects the nine who have not clicked. It does nothing about the two processes already running.",
+            "secure": "Contained. Two endpoints were already executing — behavioural detection and isolation is the only control that acts after the click.",
+            "recover": "Breached. You reimaged two machines while the credentials they held were already in use elsewhere. Restore fixes the host, not the session."
+          }
+        },
+        {
+          "tech": "T1078.004",
+          "ta": "Initial Access",
+          "name": "Valid Accounts: Cloud Accounts",
+          "desc": "A successful sign-in to the backup console from an autonomous system this business has never touched. No failed attempts first, which means the password was not guessed.",
+          "target": "backups",
+          "rank": { "manage": "weak", "secure": "partial", "recover": "best" },
+          "act": {
+            "manage": "Audit the estate for where that credential is stored",
+            "secure": "Revoke the session and block the source range",
+            "recover": "Lock the vault, enforce immutability, verify every restore point"
+          },
+          "fb": {
+            "manage": "Breached. Finding where the credential leaked matters tomorrow. Tonight, someone is signed into the thing you would recover from.",
+            "secure": "Mitigated. You cut the session. The console is still reachable with a credential that works, and the retention policy is still editable.",
+            "recover": "Contained. They came for the recovery capability first, on purpose. Immutability is what makes that visit pointless — and it had to be on before they arrived."
+          },
+          "inject": {
+            "at": 60,
+            "seconds": 5,
+            "label": "Retention policy edit submitted: 30 days to 1 day",
+            "action": "Reject the change",
+            "ok": "Change rejected. Immutability held the retention floor.",
+            "miss": "Retention rewritten. Twenty-nine days of restore points are queued for deletion."
+          }
+        },
+        {
+          "tech": "T1621",
+          "ta": "Credential Access",
+          "name": "Multi-Factor Authentication Request Generation",
+          "desc": "A finance user has approved the ninth push prompt in four minutes. The session it authorised is live and is enumerating the tenant.",
+          "target": "identity",
+          "rank": { "manage": "weak", "secure": "best", "recover": "partial" },
+          "act": {
+            "manage": "Reconfigure MFA to number matching across the tenant",
+            "secure": "Revoke the token, block the source, force reauthentication",
+            "recover": "Check whether the backup tenant shares this identity boundary"
+          },
+          "fb": {
+            "manage": "Breached. Number matching stops the next one. The session approved four minutes ago is already inside and does not re-prompt.",
+            "secure": "Contained. Prompt bombing succeeds at the moment of approval — the response is to kill the token it produced, not to argue with the policy afterwards.",
+            "recover": "Mitigated. Confirming the vault sits behind separate identity was the right instinct and it saved your recovery path. It did not save the tenant."
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "foothold",
+      "name": "Foothold",
+      "threat": "Elevated",
+      "seconds": 18,
+      "variants": [
+        {
+          "tech": "T1053.005",
+          "ta": "Persistence",
+          "name": "Scheduled Task/Job: Scheduled Task",
+          "desc": "A task named after a printer driver update runs every 43 minutes on four machines, calling out to a host registered eleven days ago.",
+          "target": "endpoints",
+          "rank": { "manage": "best", "secure": "partial", "recover": "weak" },
+          "act": {
+            "manage": "Sweep every endpoint for the task and strip it estate-wide",
+            "secure": "Alert on the beacon and contain the four known hosts",
+            "recover": "Roll the four machines back to a pre-task restore point"
+          },
+          "fb": {
+            "manage": "Contained. Persistence is a configuration problem across every machine, not an incident on four of them. You looked everywhere and found the ones nobody had reported.",
+            "secure": "Mitigated. The four you knew about are quiet. The estate sweep would have told you there were seven.",
+            "recover": "Breached. You restored four hosts and the task came back with them, because it was in the image by the time you took it."
+          }
+        },
+        {
+          "tech": "T1489",
+          "ta": "Impact",
+          "name": "Service Stop",
+          "desc": "The backup agent on the file server reported healthy at 02:00 and has sent nothing since. Its service is stopped, and the stop was clean rather than a crash.",
+          "target": "backups",
+          "rank": { "manage": "partial", "secure": "weak", "recover": "best" },
+          "act": {
+            "manage": "Restart the service and alert on future stops",
+            "secure": "Hunt the process that issued the stop",
+            "recover": "Fail over to the cloud copy and confirm the last good point"
+          },
+          "fb": {
+            "manage": "Mitigated. The agent is running again and you will hear about the next stop. You still do not know what today's backup actually contains.",
+            "secure": "Breached. Finding who stopped it is the report. It is not the recovery point, and the recovery point is what the next four stages spend.",
+            "recover": "Contained. A silenced agent is an attack on your recovery, executed early and quietly. A second, independent copy is what makes it survivable."
+          },
+          "inject": {
+            "at": 50,
+            "seconds": 5,
+            "label": "Second agent going silent: database server",
+            "action": "Force an out-of-band snapshot",
+            "ok": "Snapshot taken and sealed before the agent dropped.",
+            "miss": "Agent down. No sealed copy of the database from today."
+          }
+        },
+        {
+          "tech": "T1055",
+          "ta": "Defense Evasion",
+          "name": "Process Injection",
+          "desc": "A signed, expected process on the file server is holding a network connection it has never opened before, and its memory contains code that is not on disk anywhere.",
+          "target": "fileserver",
+          "rank": { "manage": "weak", "secure": "best", "recover": "partial" },
+          "act": {
+            "manage": "Confirm the host is fully patched and compliant",
+            "secure": "Isolate the host and terminate the injected thread",
+            "recover": "Take an out-of-band snapshot before anything changes"
+          },
+          "fb": {
+            "manage": "Breached. The host was compliant. Injection lives inside a process your inventory considers correct, so a clean compliance report is exactly what you would expect to see.",
+            "secure": "Contained. Nothing on disk means nothing for a file-based control to find. Behavioural detection in memory is the only place this is visible.",
+            "recover": "Mitigated. The snapshot is genuinely useful and you will want it later. It did not remove the code that is running now."
+          }
+        },
+        {
+          "tech": "T1136.001",
+          "ta": "Persistence",
+          "name": "Create Account: Local Account",
+          "desc": "A local administrator account called svc-backup-2 was created on the domain controller at 04:12, by a process that then deleted itself.",
+          "target": "identity",
+          "rank": { "manage": "best", "secure": "weak", "recover": "partial" },
+          "act": {
+            "manage": "Reconcile every privileged account against the approved list",
+            "secure": "Alert on the account's first interactive use",
+            "recover": "Restore directory state from last night's copy"
+          },
+          "fb": {
+            "manage": "Contained. A privileged account nobody approved is only visible if something is keeping a list of the ones that are. Reconciliation found it before it was used.",
+            "secure": "Breached. Waiting for first use means the account is doing something by the time you know it exists, and the name was chosen so nobody would look twice.",
+            "recover": "Mitigated. Rolling back the directory removed the account. It also removed four hours of legitimate changes, and the process that made it is still resident."
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "spread",
+      "name": "Spread",
+      "threat": "High",
+      "seconds": 16,
+      "variants": [
+        {
+          "tech": "T1021.002",
+          "ta": "Lateral Movement",
+          "name": "Remote Services: SMB/Windows Admin Shares",
+          "desc": "One set of local administrator credentials is authenticating to the admin share on nineteen machines in sequence. Every one of them accepts it.",
+          "target": "endpoints",
+          "rank": { "manage": "best", "secure": "partial", "recover": "weak" },
+          "act": {
+            "manage": "Randomise local admin passwords and block share-to-share traffic",
+            "secure": "Alert on the authentication pattern and contain each hop",
+            "recover": "Snapshot the machines it has already reached"
+          },
+          "fb": {
+            "manage": "Contained. The technique works because one password opens nineteen doors. Unique credentials and segmentation stop it at machine two, whether or not anyone is watching.",
+            "secure": "Mitigated. You are containing hops one at a time while it opens the next. Detection wins the race only if the estate slows it down first.",
+            "recover": "Breached. Snapshots of nineteen compromised machines are nineteen compromised snapshots. The credential still works."
+          }
+        },
+        {
+          "tech": "T1003.001",
+          "ta": "Credential Access",
+          "name": "OS Credential Dumping: LSASS Memory",
+          "desc": "Something read LSASS memory on the terminal server. Eleven cached domain credentials were resident, two of them belonging to domain administrators.",
+          "target": "identity",
+          "rank": { "manage": "partial", "secure": "best", "recover": "weak" },
+          "act": {
+            "manage": "Enforce credential guard and strip cached logons estate-wide",
+            "secure": "Block the memory read, isolate the host, force a domain-wide reset",
+            "recover": "Restore the terminal server to this morning's state"
+          },
+          "fb": {
+            "manage": "Mitigated. Credential guard is the right control and it will stop the next dump. The eleven credentials already in hand do not expire because you turned it on.",
+            "secure": "Contained. The read was the moment. Blocking it and resetting what was resident is the only sequence that ends with BlackVault holding nothing usable.",
+            "recover": "Breached. You restored the machine. The credentials were never in the machine — they were in memory, and now they are in a text file somewhere else."
+          },
+          "inject": {
+            "at": 58,
+            "seconds": 5,
+            "label": "Domain admin credential authenticating from a workstation",
+            "action": "Disable the account",
+            "ok": "Account disabled mid-authentication. The hop failed.",
+            "miss": "Domain admin session established. BlackVault now has the estate's keys."
+          }
+        },
+        {
+          "tech": "T1570",
+          "ta": "Lateral Movement",
+          "name": "Lateral Tool Transfer",
+          "desc": "A 340 MB archive has been written to the backup repository share and unpacked there. The repository is the one place on the network nothing scans, because it is where everything gets written.",
+          "target": "backups",
+          "rank": { "manage": "weak", "secure": "partial", "recover": "best" },
+          "act": {
+            "manage": "Tighten share permissions and inventory what is on it",
+            "secure": "Scan the repository and quarantine the archive",
+            "recover": "Sever the repository, verify chain integrity, promote the sealed copy"
+          },
+          "fb": {
+            "manage": "Breached. Correcting the permissions matters, and it matters after. They are already staging from inside the share your restores depend on.",
+            "secure": "Mitigated. The archive is quarantined. You have not established whether the restore points sitting beside it are still trustworthy, which is the question that decides stage five.",
+            "recover": "Contained. Staging on the repository is reconnaissance against your recovery. Severing it and proving the chain is intact is what keeps a bad week from being a closure."
+          }
+        },
+        {
+          "tech": "T1490",
+          "ta": "Impact",
+          "name": "Inhibit System Recovery",
+          "desc": "Shadow copies have been deleted on every server that had them, and the Windows recovery environment has been disabled. This is the step that happens before encryption, not during it.",
+          "target": "databases",
+          "rank": { "manage": "partial", "secure": "weak", "recover": "best" },
+          "act": {
+            "manage": "Re-enable recovery and lock the configuration by policy",
+            "secure": "Trace the process and alert on the deletion pattern",
+            "recover": "Confirm the off-box immutable copies are sealed and current"
+          },
+          "fb": {
+            "manage": "Mitigated. Locking the configuration protects what is left. What was deleted was on the same boxes as the data, which is why it was deletable.",
+            "secure": "Breached. You have a precise timeline of the deletion. A timeline is not a restore point, and the deletion is what the next stage was built on.",
+            "recover": "Contained. Local recovery was always going to be removed. A copy that is off the box and cannot be edited is the difference between an outage and an ending."
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "preimpact",
+      "name": "Pre-impact",
+      "threat": "Severe",
+      "seconds": 14,
+      "variants": [
+        {
+          "tech": "T1562.001",
+          "ta": "Defense Evasion",
+          "name": "Impair Defenses: Disable or Modify Tools",
+          "desc": "A legitimately signed but vulnerable storage driver was loaded twenty minutes ago, and the endpoint agent on four servers stopped reporting immediately after. The driver is on no blocklist here.",
+          "target": "endpoints",
+          "rank": { "manage": "best", "secure": "partial", "recover": "weak" },
+          "act": {
+            "manage": "Apply the vulnerable driver blocklist and enforce it estate-wide",
+            "secure": "Escalate on the agent going silent and contain the four servers",
+            "recover": "Snapshot the four servers while they are still readable"
+          },
+          "fb": {
+            "manage": "Contained. Bring your own vulnerable driver defeats the agent from underneath, in kernel space. What stops it is the driver never loading — a policy decision made in advance.",
+            "secure": "Mitigated. Tamper alerts told you the agent went quiet, which is real and useful. The control that would have acted is the one they just switched off.",
+            "recover": "Breached. Snapshots of four servers with a malicious driver in the boot chain restore the driver too. The blocklist was the control, and it was not there."
+          }
+        },
+        {
+          "tech": "T1567.002",
+          "ta": "Exfiltration",
+          "name": "Exfiltration to Cloud Storage",
+          "desc": "Forty-one gigabytes have moved to a consumer cloud storage endpoint over six hours, at a rate chosen to look like a backup job. It contains the patient and payroll directories.",
+          "target": "cloud",
+          "rank": { "manage": "partial", "secure": "best", "recover": "weak" },
+          "act": {
+            "manage": "Block the destination and restrict egress by policy",
+            "secure": "Kill the transfer, scope exactly what left, cut the channel",
+            "recover": "Confirm both directories are backed up and intact"
+          },
+          "fb": {
+            "manage": "Mitigated. Egress control stops the remaining transfer and every future one. Six hours of it already completed, and you cannot tell the client how much.",
+            "secure": "Contained. Stopping it matters less than knowing precisely what left — that is the number the client's regulator will ask for, and only response telemetry can produce it.",
+            "recover": "Breached. Your copy of the data was never the problem. A backup cannot un-publish forty-one gigabytes that are already on somebody else's disk."
+          }
+        },
+        {
+          "tech": "T1552.001",
+          "ta": "Credential Access",
+          "name": "Unsecured Credentials: Credentials In Files",
+          "desc": "The backup service account's password is in plain text in a maintenance script on the file server, and the file was read nine minutes ago by a process that had no reason to.",
+          "target": "backups",
+          "rank": { "manage": "partial", "secure": "weak", "recover": "best" },
+          "act": {
+            "manage": "Find and purge every credential in a file across the estate",
+            "secure": "Hunt the reading process and alert on script access",
+            "recover": "Rotate the service account, re-seal the vault, break the path"
+          },
+          "fb": {
+            "manage": "Mitigated. Purging the estate's plain-text credentials is exactly the right project. It does not un-read the one that was read nine minutes ago.",
+            "secure": "Breached. There was nothing anomalous to detect — a file was opened. The consequence is that your vault credential is now BlackVault's vault credential.",
+            "recover": "Contained. The credential was a path to your recovery capability. Rotating it and re-sealing the vault closes the path while it is still only a path."
+          },
+          "inject": {
+            "at": 62,
+            "seconds": 4,
+            "label": "Vault sign-in attempt with the service account",
+            "action": "Break the session",
+            "ok": "Session refused. The rotated credential failed at the door.",
+            "miss": "Vault session established with a credential you own."
+          }
+        },
+        {
+          "tech": "T1531",
+          "ta": "Impact",
+          "name": "Account Access Removal",
+          "desc": "Six administrator accounts have been disabled in the last two minutes, including both break-glass accounts. The console is refusing your own sign-in.",
+          "target": "identity",
+          "rank": { "manage": "weak", "secure": "best", "recover": "partial" },
+          "act": {
+            "manage": "Push a policy to restore the disabled accounts",
+            "secure": "Take the emergency access path, revoke their tokens, block the source",
+            "recover": "Restore the directory and the tenant configuration"
+          },
+          "fb": {
+            "manage": "Breached. Management tooling authenticates against the directory it is trying to fix. Locking out the administrators locks out the tool, and the policy never lands.",
+            "secure": "Contained. This is an identity incident and it is won on the identity plane — emergency access, token revocation, source blocking, in that order and inside two minutes.",
+            "recover": "Mitigated. The directory restore works and it gets you back in. It takes fifty minutes, and the next stage does not wait fifty minutes."
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "impact",
+      "name": "Impact",
+      "threat": "Critical",
+      "seconds": 13,
+      "variants": [
+        {
+          "tech": "T1219",
+          "ta": "Command and Control",
+          "name": "Remote Access Software",
+          "desc": "The encryptor is being delivered through the remote monitoring tenant that manages this estate, signed and approved, to every agent at once. This is how Kaseya happened.",
+          "target": "endpoints",
+          "rank": { "manage": "best", "secure": "partial", "recover": "weak" },
+          "act": {
+            "manage": "Sever the tenant, revoke its keys, halt every queued action",
+            "secure": "Block the payload's signature and contain what has run",
+            "recover": "Begin restoring the machines that have already encrypted"
+          },
+          "fb": {
+            "manage": "Contained. When the management plane is the delivery mechanism, the only control that scales as fast as the attack is the management plane itself. Severing it stopped every agent in one action.",
+            "secure": "Mitigated. Endpoint response caught what had already executed. It was arriving from a trusted console faster than containment could be applied machine by machine.",
+            "recover": "Breached. You started restoring into an estate where the delivery channel was still open, so the restored machines were re-encrypted from the same console."
+          }
+        },
+        {
+          "tech": "T1486",
+          "ta": "Impact",
+          "name": "Data Encrypted for Impact",
+          "desc": "Encryption started on the file server ninety seconds ago and is moving through the shares alphabetically. Nobody can open anything from the letter C onwards.",
+          "target": "fileserver",
+          "rank": { "manage": "weak", "secure": "partial", "recover": "best" },
+          "act": {
+            "manage": "Push a policy to stop the process across the estate",
+            "secure": "Kill the process and isolate the file server",
+            "recover": "Cut the share, restore from the sealed copy, verify as you go"
+          },
+          "fb": {
+            "manage": "Breached. A policy push takes a management cycle to reach an agent. The encryptor finishes a share in under a minute, and it does not wait for the cycle.",
+            "secure": "Mitigated. Killing the process stopped it where it had got to. Everything from A to C is still encrypted, and stopping is not the same as getting it back.",
+            "recover": "Contained. This is the one moment recovery is the answer, and it only works because the sealed copy existed before today. Built in advance, not reached for now."
+          }
+        },
+        {
+          "tech": "T1485",
+          "ta": "Impact",
+          "name": "Data Destruction",
+          "desc": "The backup repository is being overwritten first, before anything else is touched. Twelve of nineteen restore points are already gone and the process is still running.",
+          "target": "backups",
+          "rank": { "manage": "partial", "secure": "best", "recover": "weak" },
+          "act": {
+            "manage": "Revoke the repository's access and lock the volume",
+            "secure": "Kill the destruction process and isolate the repository host",
+            "recover": "Promote whatever restore points remain"
+          },
+          "fb": {
+            "manage": "Mitigated. Locking the volume stopped the overwrite at twelve. Seven restore points survived because you moved, which is a worse position than you had this morning and a better one than none.",
+            "secure": "Contained. When the thing being destroyed is the recovery capability, response has to stop the process — there is no restoring your way out of a deletion that is still in progress.",
+            "recover": "Breached. Promoting the survivors while the process was still running meant promoting into the deletion. It reached them too."
+          }
+        },
+        {
+          "tech": "T1072",
+          "ta": "Execution",
+          "name": "Software Deployment Tools",
+          "desc": "A deployment job is queued in the software distribution console for three hundred endpoints, scheduled for 18:00, packaged and signed like every other job on the list.",
+          "target": "endpoints",
+          "rank": { "manage": "best", "secure": "weak", "recover": "partial" },
+          "act": {
+            "manage": "Pull the job, revoke the console's authority, freeze all deployment",
+            "secure": "Add the package to the block list and watch for execution",
+            "recover": "Stage restores for the endpoints the job will reach"
+          },
+          "fb": {
+            "manage": "Contained. It has not run yet. Pulling the job and freezing the console is the only action available that costs nothing, and it is available for another few minutes.",
+            "secure": "Breached. Endpoint controls treat a signed package from an approved console as approved software, because that is what it is. Nothing blocked at 18:00.",
+            "recover": "Mitigated. Restores for three hundred endpoints is a fortnight of work you have now committed to, for a job you could have deleted while it sat in a queue."
+          },
+          "inject": {
+            "at": 45,
+            "seconds": 4,
+            "label": "Deployment schedule moved forward: 18:00 to now",
+            "action": "Freeze the console",
+            "ok": "Console frozen. The job never dispatched.",
+            "miss": "Job dispatched to three hundred agents."
+          }
+        }
+      ]
+    }
+  ]
+}

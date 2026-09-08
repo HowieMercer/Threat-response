@@ -1,0 +1,70 @@
+{
+  "_schema": {
+    "note": "BlackVault's voice. Menacing but dry — a crew that does this for a living and finds the defender's effort mildly interesting. Never comic, never cackling, never an exclamation mark.",
+    "fields": {
+      "taunt": "after a breach",
+      "slowed": "after a mitigated stage",
+      "foiled": "after a contained stage",
+      "climaxHoldsBackups": "stage five opener when the backups are already lost",
+      "climaxNoBackups": "stage five opener when the backups are still standing",
+      "openers": "shown as the attack begins, once per run",
+      "ticker": "attract-screen threat feed. Real technique names only."
+    }
+  },
+
+  "name": "BlackVault",
+  "handle": "BLACKVAULT",
+
+  "openers": [
+    "We have been inside for eleven days. Today is just the part you can see.",
+    "Your estate took four minutes to map. Nobody was looking.",
+    "We do not need to be fast. We need you to be slower."
+  ],
+
+  "taunt": [
+    "Thank you. That was the door we wanted.",
+    "You reached for the wrong layer. We counted on it.",
+    "Noted. That control was not configured to stop us.",
+    "You are responding. We are already past you.",
+    "That is the third time you have protected the wrong thing."
+  ],
+
+  "slowed": [
+    "Slower. Not stopped.",
+    "You cost us minutes. We have hours.",
+    "Half a control is a control we work around.",
+    "You found it. You did not finish it."
+  ],
+
+  "foiled": [
+    "That was configured before we arrived. Inconvenient.",
+    "Layered. We will find a client who is not.",
+    "You closed it before we used it. Rare.",
+    "That was not luck. Someone made a decision months ago."
+  ],
+
+  "climaxHoldsBackups": [
+    "We took your recovery two stages ago. This part is administrative.",
+    "There is nothing to restore from. Read the note."
+  ],
+
+  "climaxNoBackups": [
+    "Your backups are still there. That is the only reason this is a conversation.",
+    "You kept the one thing we came for. We will still make today expensive."
+  ],
+
+  "ticker": [
+    { "tech": "T1486", "text": "Data Encrypted for Impact — manufacturing, 14 sites" },
+    { "tech": "T1078.004", "text": "Valid Accounts: Cloud Accounts — backup tenant sign-in, no MFA" },
+    { "tech": "T1562.001", "text": "Impair Defenses: Disable or Modify Tools — signed driver abuse" },
+    { "tech": "T1490", "text": "Inhibit System Recovery — shadow copies removed pre-encryption" },
+    { "tech": "T1567.002", "text": "Exfiltration to Cloud Storage — 41 GB, consumer endpoint" },
+    { "tech": "T1219", "text": "Remote Access Software — delivery via managed tenant" },
+    { "tech": "T1021.002", "text": "Remote Services: SMB/Windows Admin Shares — 19 hosts, one credential" },
+    { "tech": "T1003.001", "text": "OS Credential Dumping: LSASS Memory — domain admin resident" },
+    { "tech": "T1489", "text": "Service Stop — backup agent silent 9 hours before impact" },
+    { "tech": "T1566.001", "text": "Spearphishing Attachment — macro invoice, 11 recipients" },
+    { "tech": "T1570", "text": "Lateral Tool Transfer — staging inside the backup repository" },
+    { "tech": "T1072", "text": "Software Deployment Tools — signed package, 300 endpoints" }
+  ]
+}

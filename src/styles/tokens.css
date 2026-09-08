@@ -1,0 +1,55 @@
+/* Design tokens — extracted verbatim from v12's :root block.
+   These values are confirmed against the original source. Everything else
+   in src/styles/ still needs extracting from v12-original.html. */
+
+:root {
+  /* Base — deep violet-black, reads as a console without the
+     black-and-acid-green cliché */
+  --bg: #0C0820;
+  --bg2: #140A2C;
+  --panel: #190F3A;
+  --panel2: #22165A;
+  --line: #2C2058;
+  --line2: #3E2E80;
+
+  /* Text */
+  --text: #EDE9FB;
+  --dim: #A99FC8;
+  --faint: #6A5E92;
+
+  /* State colours. Each has a -deep fill for behind text and, where
+     needed, a -b brighter accent. */
+  --green: #33E6AE;
+  --green-b: #82FFD2;
+  --green-deep: #0C3327;
+
+  --blue: #4FA8FF;
+  --blue-deep: #10254A;
+
+  --violet: #C9A6FF;
+  --violet-deep: #2C1C5A;
+
+  --amber: #FFB23E;
+  --amber-deep: #3A2A0E;
+
+  --red: #FF4D67;
+  --red-b: #FF8198;
+  --red-deep: #3A0E1A;
+
+  /* N-able violet — primary brand accent */
+  --brand: #8B5CF6;
+  --brand-b: #B794F6;
+  --brand-deep: #1E1248;
+
+  /* Radii */
+  --r: 16px;
+  --r-sm: 11px;
+}
+
+/* Self-hosted @font-face rules go here once the woff2 files are in
+   src/assets/fonts/. Until then the game falls back to system fonts
+   with no network — which is exactly the bug worth fixing first.
+
+   Families in v12: Chakra Petch (500/600/700), Space Grotesk (500/600/700),
+   Inter (400/500/600), JetBrains Mono (500/700). Check which are actually
+   used before downloading all of them. */

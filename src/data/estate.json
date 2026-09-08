@@ -1,0 +1,21 @@
+{
+  "_schema": {
+    "note": "The six systems on the board. Order matters — it is the order they render in, left to right, and 'backups' sits last because losing it is the run's worst moment and should read as the far end of the board.",
+    "fields": {
+      "id": "slug. Scenario 'target' values must match one of these.",
+      "name": "shown on the map",
+      "short": "shown at 375px, where the full name will not fit",
+      "loss": "one line, present tense, describing what stops working when this system is lost. Colour is never the only carrier of meaning — this is the text that carries it."
+    },
+    "integrity": "Each system holds 2 (operational), 1 (degraded) or 0 (lost). A breach on the targeted system takes it to 0. A mitigated stage degrades it by 1. Recovery brings the worst-off system back up by 1."
+  },
+
+  "systems": [
+    { "id": "endpoints",  "name": "Endpoints",   "short": "Endpoint", "loss": "Nobody can work at a desk." },
+    { "id": "fileserver", "name": "File server", "short": "Files",    "loss": "Shared documents are unreadable." },
+    { "id": "identity",   "name": "Identity",    "short": "Identity", "loss": "Nobody can prove who they are." },
+    { "id": "cloud",      "name": "Cloud apps",  "short": "Cloud",    "loss": "Email and collaboration are gone." },
+    { "id": "databases",  "name": "Databases",   "short": "Data",     "loss": "The records the business runs on are unavailable." },
+    { "id": "backups",    "name": "Backups",     "short": "Backups",  "loss": "There is nothing left to restore from." }
+  ]
+}

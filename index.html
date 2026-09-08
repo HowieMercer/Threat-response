@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>N-able Threat Response</title>
+<meta name="description" content="A two-minute ransomware decision simulator. Lead with a defence layer, back it up, and see what it costs you.">
+<!-- No font <link> tags. Fonts are self-hosted via @font-face in
+     src/styles/tokens.css so the built file works with no network.
+     v12 loaded four families from Google Fonts; that is the bug. -->
+</head>
+<body>
+  <!-- Overlay shell, carried over from v12. The layer order and z-indexes
+       are load-bearing for the effects system:
+         canvas#bg  z0  — animated background
+         .vignette  z1  — pulses .alert / .crit on threat level
+         .scan      z2  — static scanline texture
+         .wrap      z5  — all game content
+         .flash     z50 — full-screen hit flash, above everything -->
+  <canvas id="bg"></canvas>
+  <div class="vignette"></div>
+  <div class="scan"></div>
+  <div class="flash"></div>
+
+  <div class="wrap">
+    <!-- Screens are mounted here by src/screens/. -->
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

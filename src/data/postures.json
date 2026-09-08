@@ -1,0 +1,78 @@
+{
+  "_schema": {
+    "note": "The readiness board. Spent BEFORE the attack starts, which is the entire commercial argument expressed as a mechanic: resilience is a set of decisions already made, not a set of reactions available on the night.",
+    "rules": {
+      "budget": "how many points the player has to spend",
+      "maxPerPillar": "cap per pillar. Set below budget on purpose — it makes a single-product build impossible to express, so the player discovers the layering argument by trying to break it."
+    },
+    "card": {
+      "id": "slug. Also the engine's switch key, so do not rename one without grepping for it.",
+      "pillar": "manage | secure | recover",
+      "product": "the real N-able product this capability belongs to",
+      "name": "the capability, in the language a security team would use",
+      "desc": "what it is, in the world",
+      "effect": "what it does in the run, stated plainly enough that the player can plan around it",
+      "recap": "past tense, for the result screen. Reads as a decision the player made months ago."
+    }
+  },
+
+  "budget": 3,
+  "maxPerPillar": 2,
+
+  "cards": [
+    {
+      "id": "patch-cadence",
+      "pillar": "manage",
+      "product": "N-central",
+      "name": "Enforced patch window",
+      "desc": "Every endpoint and server patched on a schedule nobody can defer, with exceptions that expire.",
+      "effect": "BlackVault starts every stage 12 points further back.",
+      "recap": "You closed known entry points on a schedule, so the attack started from further out."
+    },
+    {
+      "id": "asset-inventory",
+      "pillar": "manage",
+      "product": "N-central",
+      "name": "Complete asset inventory",
+      "desc": "Every device, account and service accounted for, reconciled against what is approved.",
+      "effect": "Scan reveals the strongest layer as well as the weakest.",
+      "recap": "You knew what you owned, so a scan told you where to lead instead of only where not to."
+    },
+    {
+      "id": "soc-watch",
+      "pillar": "secure",
+      "product": "Adlumin MDR",
+      "name": "24/7 monitored response",
+      "desc": "Analysts watching the estate on the hours nobody on the payroll is awake for.",
+      "effect": "One free scan every stage. It costs no capacity.",
+      "recap": "Somebody was watching at 04:00, so you never spent your own capacity finding out what was happening."
+    },
+    {
+      "id": "auto-isolate",
+      "pillar": "secure",
+      "product": "Adlumin MDR",
+      "name": "Automated host isolation",
+      "desc": "A host that behaves like a compromised host comes off the network without waiting for a human.",
+      "effect": "The first breach of the run is downgraded to mitigated.",
+      "recap": "Automated isolation caught your first mistake before a person could have."
+    },
+    {
+      "id": "immutable-vault",
+      "pillar": "recover",
+      "product": "Cove Backup",
+      "name": "Immutable off-site vault",
+      "desc": "Restore points that cannot be edited or deleted by anyone, including you, until they expire.",
+      "effect": "Backups can be degraded but never lost.",
+      "recap": "Your restore points could not be deleted by a credential, which is why you still had a business."
+    },
+    {
+      "id": "restore-drill",
+      "pillar": "recover",
+      "product": "Cove Backup",
+      "name": "Tested restore runbook",
+      "desc": "A documented restore, rehearsed quarterly, with a measured time to first system back.",
+      "effect": "A perfect stack brings back two systems instead of one.",
+      "recap": "You had restored before under no pressure, so restoring under pressure went twice as far."
+    }
+  ]
+}
