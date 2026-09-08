@@ -145,7 +145,7 @@ export function pointsToNextRank(points) {
 
 /* ----------------------------------------------------------------- zone */
 
-const ZONES = [
+export const ZONES = [
   { min: 78, zone: 'Resilient', verdict: 'Business continuity maintained' },
   { min: 55, zone: 'Prepared', verdict: 'Takes the hit and stays standing' },
   { min: 30, zone: 'Exposed', verdict: 'Survives, at serious cost' },

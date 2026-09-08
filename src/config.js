@@ -6,7 +6,7 @@
  * paths ('v11' on leads, 'v8' on completions), which made any later
  * analysis of the funnel unreliable. One constant, used everywhere.
  */
-export const VERSION = 'v13';
+export const VERSION = 'v14';
 
 /* The localStorage key is deliberately NOT versioned to match VERSION.
  *

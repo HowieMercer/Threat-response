@@ -121,6 +121,21 @@ describe('zone consistency — the v9 contradiction guard', () => {
     expect(businessOutcome(95, { ...FULL, backups: 0 })).not.toBe('continuity');
     expect(businessOutcome(10, FULL)).toBe('closed');
   });
+
+  it('converts a closure into a wounded survival when the vault is immutable', () => {
+    /* The one thing in the game that reaches businessOutcome. It does not
+     * touch the index, the defense points or the rank — the answer key is
+     * untouched — it changes whether the business opens on Monday. And it
+     * converts a closure into a wounded survival, never into a good
+     * outcome: immutable backups mean you reopen, not that nothing
+     * happened. The cost is that a player who buys it never sees the best
+     * beat in the asset, which is the right trade because the beat stays
+     * reachable for everyone who did not. */
+    const dead = { endpoints: 0, identity: 0, fileserver: 0, databases: 0, cloud: 0, backups: 0 };
+    expect(businessOutcome(3, dead)).toBe('closed');
+    expect(businessOutcome(3, dead, { vaultImmutable: true })).toBe('wounded');
+    expect(businessOutcome(3, dead, { vaultImmutable: true })).not.toBe('continuity');
+  });
 });
 
 describe('full playthroughs', () => {
@@ -464,6 +479,34 @@ describe('live injects', () => {
       g.tick(100);
       expect(g.state.inject, 'opened a window the clock cannot honour').toBeFalsy();
     }
+  });
+
+  it('leaves the events it emits on the queue for the screen to drain', () => {
+    /* The bug this replaces was invisible for five versions. tick() ended
+     * `return events.splice(0)` and every caller ignores the return, so
+     * the two events the engine emits from inside a tick never reached
+     * the UI: the inject, which is why no inject had ever appeared on
+     * screen in a browser, and the resolved that follows a timeout, which
+     * is why an unanswered stage froze instead of breaching. Nothing
+     * failed, because every harness treated a missing inject as optional. */
+    const g = createGame({ data: DATA, seed: 3, mode: 'timed' });
+    g.begin();
+    g.drain();
+    for (let i = 0; i < 40 && !g.state.inject; i++) g.tick(100);
+    expect(g.state.inject, 'no inject fired').toBeTruthy();
+    expect(g.drain().map((e) => e.type)).toContain('inject');
+
+    /* And the timeout path. Nothing committed, clock runs out. */
+    const t = createGame({ data: DATA, seed: 11, mode: 'timed' });
+    t.begin();
+    t.drain();
+    for (let i = 0; i < 400 && t.state.phase === PHASE.STAGE; i++) {
+      if (t.state.inject) t.resolveInject(false);
+      t.tick(100);
+    }
+    expect(t.state.phase).toBe(PHASE.RESOLVE);
+    const types = t.drain().map((e) => e.type);
+    expect(types).toContain('resolved');
   });
 
   it('costs ground when missed and buys it back when caught', () => {

@@ -87,7 +87,12 @@ for (const vp of WIDTHS) {
       await page.waitForTimeout(300);
       await shot('06-stage3-scanned');
     }
-    // Try to catch an inject on screen.
+    /* Wait out the inject schedule before picking. Injects fire under 3
+     * seconds into a stage and never into a half-built stack, so a harness
+     * that commits a lead in 200ms would never see one. */
+    if (await page.evaluate(() => !!window.TR.S.variant.inject)) {
+      await page.waitForTimeout(3200);
+    }
     if (await page.locator('.inject').count()) {
       await shot(`07-inject-stage${s + 1}`);
       await page.locator('.inject .btn').first().click();

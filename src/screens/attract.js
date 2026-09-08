@@ -85,6 +85,56 @@ export function renderAttract(app) {
     },
   }, 'Start the incident', h('span', { class: 'kbd' }, '↵'));
 
+  /* Type in a run code and play the identical five stages.
+   *
+   * Runs have always been seeded and reproducible, and the code has always
+   * been printed on the result screen — but there was nowhere to type one
+   * in, so the feature existed only for someone willing to hand-edit a URL
+   * fragment. It is the cheapest competitive mechanic a stand has (give two
+   * people the same run and the comparison is honest) and the only way a
+   * reported bug is reproducible. */
+  const seedInput = h('input', {
+    type: 'text', id: 'seed-code', maxlength: '6', autocapitalize: 'characters',
+    spellcheck: 'false', autocomplete: 'off', placeholder: 'ABCDE',
+    'aria-describedby': 'seed-help',
+    oninput(ev) {
+      const el = ev.currentTarget;
+      el.value = el.value.toUpperCase().replace(/[^0-9A-Z]/g, '');
+      seedErr.textContent = '';
+    },
+    onkeydown(ev) {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        ev.stopPropagation();
+        goSeed();
+      }
+    },
+  });
+  const seedErr = h('span', { class: 'seed-err', role: 'alert' }, '');
+  function goSeed() {
+    const code = seedInput.value.trim();
+    if (!code) {
+      seedErr.textContent = 'Enter the five-character code from a result screen.';
+      seedInput.focus();
+      return;
+    }
+    app.audio.unlock();
+    app.audio.tap();
+    game.setMode(mode);
+    game.setClient(clientId);
+    if (!app.playSeed(code)) {
+      seedErr.textContent = `${code} is not a run code.`;
+      seedInput.focus();
+    }
+  }
+  const seedRow = h('div', { class: 'seed-row' },
+    h('label', { for: 'seed-code' }, 'Run code'),
+    seedInput,
+    h('button', { class: 'btn sm ghost', type: 'button', onclick: goSeed }, 'Play it'),
+    h('span', { class: 'seed-help', id: 'seed-help' }, 'Plays the identical five stages.'),
+    seedErr
+  );
+
   const node = h('main', { class: 'screen attract center' },
     h('div', { style: { maxWidth: '900px', margin: '0 auto' } },
       h('span', { class: 'label', style: { display: 'block', marginBottom: '10px' } },
@@ -93,6 +143,7 @@ export function renderAttract(app) {
       h('p', { class: 'tag' },
         'BlackVault is already inside. Five stages, real ATT&CK techniques, and one question at each: which layer do you lead with, and what backs it up?'),
       h('div', { class: 'attract-cta' }, start, modeBtn),
+      seedRow,
       CONFIG.prize ? h('p', { class: 'label', style: { marginBottom: '18px' } }, CONFIG.prize.toUpperCase()) : null
     ),
 

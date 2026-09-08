@@ -190,7 +190,9 @@ const shot = (page, name, full = false) =>
 
 /* One full run. `strategy` is 'best' or 'weak', so both the contained and
  * the breached paths get exercised including the ransom-note beat. */
-async function playThrough(page, tag, { strategy, capture = false, allVariants = false }) {
+const FULL_POSTURE = [/Immutable off-site vault/, /24\/7 monitored response/, /Enforced patch window/];
+
+async function playThrough(page, tag, { strategy, capture = false, allVariants = false, posture = FULL_POSTURE }) {
   await page.getByRole('button', { name: /Start the incident/ }).click();
   await page.waitForTimeout(250);
   await checkOverflow(page, tag, 'briefing');
@@ -201,8 +203,13 @@ async function playThrough(page, tag, { strategy, capture = false, allVariants =
   await checkOverflow(page, tag, 'readiness');
   await checkTaps(page, tag, 'readiness');
 
-  // Spend the budget across two pillars, which is the shape the cap forces.
-  for (const name of [/Immutable off-site vault/, /24\/7 monitored response/, /Enforced patch window/]) {
+  /* Spend the budget across two pillars, which is the shape the cap
+   * forces — or spend nothing, which is what the worst-play run does. It
+   * has to: the immutable vault converts a closure into a wounded
+   * survival by design, so a run that buys it can no longer reach the
+   * closure copy, and the closure copy is the beat this whole harness
+   * exists to keep working. */
+  for (const name of posture) {
     const b = page.getByRole('button', { name });
     if (await b.count()) await b.first().click();
   }
@@ -292,6 +299,13 @@ async function playThrough(page, tag, { strategy, capture = false, allVariants =
       business: s.business, gap: s.gap.key, seed: s.seedCode,
       report: window.TR.report().length,
       qr: !!document.querySelector('.qr-box svg'),
+      /* The best beat in the asset is a sentence in the client's own
+       * words, and nothing else in this harness would notice it going
+       * missing. */
+      closureCopy: (document.querySelector('.v-business')?.textContent || '') === s.client.closed,
+      /* The dial's band ring: four arcs, exactly one at full strength. */
+      dialBands: document.querySelectorAll('.dial .band').length,
+      dialActive: document.querySelectorAll('.dial .band.on').length,
     };
   });
 }
@@ -328,6 +342,9 @@ for (const vp of VIEWPORTS) {
     if (timed.index !== 100) note(`${tag}: expert play scored ${timed.index}, expected 100`);
     if (!timed.qr) note(`${tag}: no scorecard QR rendered`);
     if (timed.report < 800) note(`${tag}: incident report suspiciously short (${timed.report} chars)`);
+    if (timed.dialBands !== 4 || timed.dialActive !== 1) {
+      note(`${tag}: dial drew ${timed.dialBands} bands with ${timed.dialActive} active, expected 4 and 1`);
+    }
 
     await ctx.close();
 
@@ -337,12 +354,106 @@ for (const vp of VIEWPORTS) {
     const weak = await playThrough(second.page, second.tag + '/learn', {
       strategy: 'weak',
       capture: !reduced && vp.name === 'phone',
+      /* Three unspent readiness points, which is both the state that
+       * reaches the closure copy and a result-screen branch nothing else
+       * here exercises. */
+      posture: [],
     });
     console.log(`${tag.padEnd(20)} learn/worst   ${JSON.stringify(weak)}`);
     if (weak.index !== 3) note(`${tag}: worst play scored ${weak.index}, expected 3`);
     if (weak.business !== 'closed') note(`${tag}: worst play left the business ${weak.business}, expected closed`);
+    if (!weak.closureCopy) note(`${tag}: the closure line did not render on the result screen`);
     await second.ctx.close();
   }
+}
+
+/* ─────────────────────────────────────────── injects, and the timeout
+ *
+ * Both of these come off engine events emitted from inside tick(), which
+ * for five versions were being thrown away before the screen could read
+ * them, so neither mechanic worked in a browser and nothing failed. Run
+ * once on a seed whose first stage carries an inject, because a
+ * conditional check on a random draw is exactly what let this hide.
+ */
+{
+  const { ctx, page, tag } = await newPage({ name: 'inject', width: 1024, height: 768 });
+  await page.goto(FILE + '#22223', { waitUntil: 'load' });
+  await page.waitForTimeout(400);
+  await page.getByRole('button', { name: /Start the incident/ }).click();
+  await page.waitForTimeout(250);
+  await page.getByRole('button', { name: /Set your readiness/ }).click();
+  await page.waitForTimeout(200);
+  await page.locator('.posture-foot .btn.primary').click();
+  await page.waitForTimeout(600);
+
+  const scheduled = await page.evaluate(() => window.TR.S.variant.inject?.after ?? null);
+  if (scheduled === null) note('inject: seed 22223 no longer draws an inject at stage one');
+
+  /* Put keyboard focus on a pillar card first. The inject must not take
+   * it, and Space must still activate the card — the two failures that
+   * made the inject and the decision mutually exclusive in v13. */
+  await page.locator('.pill').first().focus();
+  await page.locator('.inject').waitFor({ state: 'visible', timeout: 6000 }).catch(() => {
+    note('inject: never rendered');
+  });
+  const state = await page.evaluate(() => ({
+    focusStillOnCard: document.activeElement?.classList.contains('pill'),
+    /* Tab order: the action has to be reachable, so it lives in the DOM
+     * after the cards rather than on document.body. */
+    inPickArea: !!document.querySelector('.pick-area .inject'),
+    coversCards: (() => {
+      const inj = document.querySelector('.inject')?.getBoundingClientRect();
+      if (!inj) return true;
+      return [...document.querySelectorAll('.pill')].some((c) => {
+        const r = c.getBoundingClientRect();
+        return inj.bottom > r.top && inj.top < r.bottom && inj.right > r.left && inj.left < r.right;
+      });
+    })(),
+    key: document.querySelector('.inject .kbd')?.textContent,
+  }));
+  if (!state.focusStillOnCard) note('inject: stole keyboard focus from a pillar card');
+  if (!state.inPickArea) note('inject: not in the pick area, so Tab cannot reach it');
+  if (state.coversCards) note('inject: overlaps a pillar card');
+  if (state.key !== 'X') note(`inject: advertises ${state.key}, expected X`);
+
+  /* Space belongs to the focused card, not the inject. */
+  await page.keyboard.press(' ');
+  await page.waitForTimeout(150);
+  const afterSpace = await page.evaluate(() => ({ lead: window.TR.S.lead, inject: !!window.TR.S.inject }));
+  if (!afterSpace.lead) note('inject: Space did not activate the focused pillar card');
+  if (!afterSpace.inject) note('inject: Space answered the inject instead of the card');
+
+  await page.keyboard.press('x');
+  await page.waitForTimeout(250);
+  const answered = await page.evaluate(() => ({ inject: !!window.TR.S.inject, dom: !!document.querySelector('.inject') }));
+  if (answered.inject || answered.dom) note('inject: X did not answer it');
+  console.log(`${tag.padEnd(20)} fires at ${scheduled}s, no focus theft, no overlap, X answers it`);
+  await ctx.close();
+}
+
+{
+  /* A stage nobody answers has to resolve as a breach on screen, not
+   * freeze with the pick area still up. */
+  const { ctx, page, tag } = await newPage({ name: 'timeout', width: 1024, height: 768 });
+  await page.getByRole('button', { name: /Start the incident/ }).click();
+  await page.waitForTimeout(250);
+  await page.getByRole('button', { name: /Set your readiness/ }).click();
+  await page.waitForTimeout(200);
+  await page.locator('.posture-foot .btn.primary').click();
+  await page.locator('.resolve').waitFor({ state: 'visible', timeout: 40000 }).catch(() => {
+    note('timeout: an unanswered stage never resolved on screen');
+  });
+  const r = await page.evaluate(() => ({
+    outcome: window.TR.S.rounds[0]?.outcome,
+    timedOut: window.TR.S.rounds[0]?.timedOut,
+    label: document.querySelector('.outcome h3')?.textContent,
+    next: !!document.querySelector('.resolve .btn.primary'),
+  }));
+  if (r.outcome !== 'breached' || !r.timedOut) note(`timeout: resolved as ${r.outcome}, timedOut=${r.timedOut}`);
+  if (r.label !== 'Breached') note(`timeout: outcome heading read "${r.label}"`);
+  if (!r.next) note('timeout: no way forward from the resolve screen');
+  console.log(`${tag.padEnd(20)} unanswered stage resolves as ${r.outcome}, "${r.label}", continue offered`);
+  await ctx.close();
 }
 
 await browser.close();

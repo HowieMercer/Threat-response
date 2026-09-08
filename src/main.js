@@ -109,8 +109,19 @@ const app = {
         /* The result screen is the artifact that gets screenshotted into a
          * deck. It sits at the calm end of the drift regardless of how the
          * run went — the score says what happened, the page does not need
-         * to still be flushed red. */
+         * to still be flushed red.
+         *
+         * All four have to be reset, not just the stage attribute. The
+         * vignette, the particle field and the drone are driven from the
+         * stage loop frame by frame and keep whatever state the loop left
+         * them in when it stopped, so a run that ended at depth 96 handed
+         * the result screen a red wash over every panel on it. Invisible
+         * on v13's near-black ground and impossible to miss on this one. */
         Escalation.clear();
+        vignette('calm');
+        field.setMood('calm');
+        field.setDepth(0);
+        audio.setDepth(0);
         renderResult(app, game.summary());
         break;
       default:
@@ -179,6 +190,36 @@ const app = {
     started = true;
     game.goPosture();
     app.render();
+  },
+
+  /* Play a named run. The seed has always been reproducible and printed on
+   * the result screen, and there has never been anywhere to type one in —
+   * so the one feature that makes a stand competitive, and makes a
+   * reported bug reproducible, was reachable only by hand-editing the URL.
+   * Returns false on a code the decoder rejects so the caller can say so
+   * rather than silently starting a different run. */
+  playSeed(code) {
+    const seed = decodeSeed(String(code || '').trim());
+    if (seed === null || !Number.isFinite(seed)) return false;
+    teardown();
+    const mode = game.state.mode;
+    const client = game.state.client.id;
+    game = createGame({ data: DATA, seed, mode });
+    game.setClient(client);
+    /* So the address bar matches the run, which is what makes it shareable
+     * when the file is served rather than opened from disk. Guarded because
+     * some browsers refuse history writes on file:// and the whole point of
+     * this build is that it runs from disk. */
+    try {
+      history.replaceState(null, '', `${location.pathname}${location.search}#${game.state.seedCode}`);
+    } catch { /* file:// — the run is identical, only the URL is not. */ }
+    Store.bump('plays');
+    post('play', { client, mode, seed: game.state.seedCode, seeded: true });
+    completed = false;
+    started = true;
+    game.goPosture();
+    app.render();
+    return true;
   },
 
   toAttract() {
@@ -353,6 +394,7 @@ window.TR = {
   hold: () => game.hold(),
   rightBackupFor,
   startGame: () => app.start(),
+  playSeed: (code) => app.playSeed(code),
   briefGo: () => {
     game.goPosture();
     app.render();

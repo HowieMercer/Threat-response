@@ -241,9 +241,24 @@ export function createGame({ data, seed, mode = 'timed' }) {
      *
      * The stage clock still runs in learn mode. It has to: injects are
      * scheduled against time in the stage rather than ground lost, so
-     * before this a learn-mode player never saw one at all. */
+     * before this a learn-mode player never saw one at all.
+     *
+     * Returns nothing, and that is a fix rather than a tidy-up. Every
+     * version of this through v13 ended `return events.splice(0)`, and
+     * every caller ignores the return value — the stage loop calls tick()
+     * and then drain() on the next line. So the splice inside tick threw
+     * away every event the engine emitted from inside a tick, and the two
+     * it emits from there are the two that were mysteriously never seen:
+     * `inject`, which is why no inject has ever appeared on screen in a
+     * browser, and the `resolved` that follows a timeout, which is why a
+     * stage nobody answered froze with the pick area still showing instead
+     * of resolving as a breach. Both mechanics were live in the engine and
+     * dead in the build, and every harness treated a missing inject as
+     * optional, so nothing failed. The queue now has exactly one drain
+     * point, which is what the comment in screens/stage.js always claimed.
+     */
     tick(dtMs) {
-      if (state.phase !== PHASE.STAGE) return events.splice(0);
+      if (state.phase !== PHASE.STAGE) return;
       state.stageElapsed += dtMs;
 
       if (state.mode !== 'learn') {
@@ -259,7 +274,6 @@ export function createGame({ data, seed, mode = 'timed' }) {
          * breach, because indecision is a decision at this speed. */
         commit({ timedOut: true });
       }
-      return events.splice(0);
     },
 
     /* ---------------------------------------------------------- actions */

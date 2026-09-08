@@ -2,47 +2,77 @@
  * staff open a conversation on. Everything here is either the score, the
  * gap, or a way to take it away with you. */
 
-.result-top {
+/* The hero: the dial and what it means, side by side, and nothing else
+   above them. The rank used to lead this screen and now sits below the
+   gap — see the note in screens/result.js. */
+.result-hero {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: 264px minmax(0, 1fr);
+  gap: 22px;
   align-items: center;
   margin-bottom: 16px;
 }
 @media (max-width: 760px) {
-  .result-top {
+  .result-hero {
     grid-template-columns: minmax(0, 1fr);
     text-align: center;
-    gap: 12px;
+    gap: 14px;
   }
+}
+.hero-dial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 /* The dial. One animated number in the whole run, because it is the one
- * number the run was building toward. */
+ * number the run was building toward — and the band ring outside it is
+ * what makes the number mean something without a legend. */
 .dial {
   position: relative;
-  width: 232px;
-  height: 232px;
+  width: 264px;
+  height: 264px;
   margin: 0 auto;
 }
 .dial svg {
   width: 100%;
   height: 100%;
+  /* So fraction 0 is 12 o'clock for the bands, the ticks and the value
+     ring alike, and the value ring animates on one property. */
   transform: rotate(-90deg);
 }
 .dial .ring-bg {
   fill: none;
-  stroke: var(--line);
-  stroke-width: 12;
+  stroke: var(--line2);
+  stroke-width: 13;
 }
 .dial .ring-fg {
   fill: none;
   stroke: var(--tone, var(--brand));
-  stroke-width: 12;
+  stroke-width: 13;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 12px var(--tone, var(--brand)));
   transition: stroke-dashoffset 1.2s var(--ease-out);
 }
+/* The four zone bands. The one the run landed in is solid, the other
+   three are a quarter strength — so which quarter of the scale this run
+   sits in survives greyscale printing and a deck thumbnail, where a
+   colour difference alone would not. */
+.dial .band {
+  fill: none;
+  stroke: var(--tone);
+  stroke-width: 5;
+  opacity: 0.26;
+}
+.dial .band.on {
+  opacity: 1;
+  stroke-width: 7;
+}
+.dial .tick {
+  stroke: var(--faint);
+  stroke-width: 1.5;
+}
+
 .dial-mid {
   position: absolute;
   inset: 0;
@@ -53,9 +83,17 @@
 }
 .dial-num {
   font-family: var(--display);
-  font-size: 62px;
-  line-height: 1;
+  font-size: 72px;
+  line-height: 0.94;
   color: var(--tone-b, var(--text));
+}
+.dial-zone {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: var(--tone-b, var(--text));
+  margin-top: 2px;
 }
 .dial-cap {
   font-family: var(--mono);
@@ -64,41 +102,76 @@
   letter-spacing: 0.11em;
   text-transform: uppercase;
   color: var(--faint);
-  margin-top: 6px;
+  margin-top: 7px;
   text-align: center;
-  /* The hole in the ring is about 130px across. Wider than this and the
+  /* The hole in the ring is about 150px across. Wider than this and the
      caption runs under the stroke. */
-  max-width: 116px;
+  max-width: 124px;
   line-height: 1.35;
 }
 
-.rank-block h1 {
-  font-size: clamp(28px, 6vw, 46px);
-  line-height: 1.02;
-  margin-bottom: 6px;
+/* Where the lines are, in words, because "two points off Resilient" is
+   the question anyone who just missed one is about to ask. */
+.dial-scale {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px 9px;
+  width: 100%;
+  max-width: 300px;
 }
-.rank-block .rank-blurb {
-  font-size: 15px;
-  color: var(--dim);
-  margin-bottom: 12px;
-  max-width: 46ch;
+.dial-scale .ds {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--faint);
 }
-@media (max-width: 760px) {
-  .rank-block .rank-blurb {
-    margin-left: auto;
-    margin-right: auto;
+.dial-scale .ds b {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tone);
+}
+.dial-scale .ds.on {
+  color: var(--tone-b);
+  font-weight: 700;
+}
+.dial-scale .ds.on b {
+  color: var(--tone-b);
+}
+
+/* The rank strip. Demoted from the headline it used to be. */
+.rank-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+  gap: 14px 20px;
+  align-items: center;
+  padding: 13px 16px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--fill-1);
+  margin-bottom: 14px;
+}
+@media (max-width: 700px) {
+  .rank-strip {
+    grid-template-columns: minmax(0, 1fr);
   }
+}
+.rank-strip h2 {
+  font-size: clamp(20px, 3.6vw, 26px);
+  line-height: 1.06;
+  margin: 3px 0 4px;
+}
+.rank-strip .rank-blurb {
+  font-size: 13.5px;
+  color: var(--dim);
+  max-width: 52ch;
 }
 .rank-row {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-@media (max-width: 760px) {
-  .rank-row {
-    justify-content: center;
-  }
+  margin-bottom: 10px;
 }
 
 .rank-prog {
@@ -164,31 +237,56 @@
 
 /* ------------------------------------------------------------ the gap */
 
+/* The gap. Second on the page and framed like it: a 2px brand border and
+   an accent bar, because on a near-white ground a tinted fill alone reads
+   as a sidebar and this is the opposite of a sidebar. */
 .gap {
-  padding: 15px 17px;
+  position: relative;
+  padding: 17px 19px 18px 22px;
   border-radius: var(--r);
-  border: 1px solid var(--brand);
-  background: linear-gradient(180deg, rgb(var(--brand-rgb) / 14%), rgb(var(--panel-rgb) / 62%));
+  border: 2px solid var(--brand);
+  background: linear-gradient(180deg, rgb(var(--brand-rgb) / 10%), var(--fill-1));
   margin-bottom: 14px;
+  overflow: hidden;
 }
-.gap h3 {
-  font-size: clamp(17px, 3.4vw, 21px);
+.gap::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--brand-b);
+}
+.gap .g-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
   margin-bottom: 8px;
 }
+.gap h2 {
+  font-size: clamp(20px, 4vw, 27px);
+  line-height: 1.12;
+  margin-bottom: 9px;
+  max-width: 34ch;
+}
 .gap .g-body {
-  font-size: 14px;
+  font-size: 14.5px;
   color: var(--dim);
   max-width: 68ch;
-  margin-bottom: 10px;
-}
-.gap .g-detail {
-  font-size: 13.5px;
-  color: var(--text);
-  padding: 9px 11px;
-  border-radius: var(--r-sm);
-  background: rgb(var(--bg-rgb) / 50%);
-  border-left: 2px solid var(--brand-b);
   margin-bottom: 11px;
+}
+/* The one line a member of booth staff reads out loud. It names the
+   technique the player actually lost to, so it gets the weight. */
+.gap .g-detail {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  padding: 11px 13px;
+  border-radius: var(--r-sm);
+  background: var(--fill-3);
+  border: 1px solid var(--line2);
+  margin-bottom: 12px;
+  line-height: 1.5;
 }
 .gap .g-opener {
   display: flex;
@@ -384,6 +482,30 @@
   color: var(--green-b);
 }
 
+/* Run code, and a way to hand it to somebody. The code has been printed
+   here since v8 and there was nowhere to type one in until now — see the
+   note on playSeed() in main.js. */
+.run-share {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line2);
+  background: var(--fill-1);
+  margin-bottom: 13px;
+}
+.run-share .seed-code {
+  font-size: 17px;
+}
+.run-share-note {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--faint);
+  line-height: 1.45;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -528,21 +650,30 @@
   }
 }
 
-/* The dial at a fixed 232px is more than half the height of a 375x667
- * screen before anything else has rendered. */
+/* The dial at its desktop 264px is more than half the height of a 375x667
+ * screen before anything else has rendered, so the phone gets a smaller
+ * one. The bands stay: they are the part that carries the verdict, and on
+ * the screen with the least room for a legend they matter most. */
 @media (max-width: 480px) {
-  .result-top {
+  .result-hero {
     grid-template-columns: minmax(0, 1fr);
   }
   .dial {
-    width: 168px;
-    height: 168px;
+    width: 188px;
+    height: 188px;
   }
   .dial-num {
-    font-size: 46px;
+    font-size: 52px;
+  }
+  .dial-zone {
+    font-size: 13px;
   }
   .dial-cap {
     font-size: 7.5px;
-    max-width: 88px;
+    max-width: 92px;
+    margin-top: 5px;
+  }
+  .dial-scale .ds {
+    font-size: 10px;
   }
 }

@@ -167,7 +167,7 @@ export function readBack(m) {
 const PAYLOADS = [
   'HELLO',
   'https://www.n-able.com',
-  'https://www.n-able.com?tr=v13&s=QK7MN&i=87&d=8&z=Prepared&r=Threat+Hunter&c=harbour-dental&g=during',
+  'https://www.n-able.com?tr=v14&s=QK7MN&i=87&d=8&z=Prepared&r=Threat+Hunter&c=harbour-dental&g=during',
   'Threat Response — Harbour Dental — index 87 — Threat Hunter',
   'x'.repeat(180),
 ];
