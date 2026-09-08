@@ -846,11 +846,11 @@
     padding: 1px 3px;
   }
   .estate {
-    margin-bottom: 10px;
+    margin-bottom: 9px;
   }
 
   .track {
-    margin-bottom: 10px;
+    margin-bottom: 9px;
   }
   .track-rail {
     height: 34px;
@@ -868,14 +868,26 @@
 
   .threat {
     padding: 11px 12px;
-    margin-bottom: 9px;
+    margin-bottom: 8px;
   }
   .threat h2 {
     margin-bottom: 5px;
   }
+  /* The height cap is a structural guard, not a tuning number.
+   *
+   * At 375x667 the three pillar cards clear the fold by about ten pixels,
+   * and the description is the one block whose height comes from content
+   * somebody else will write. Without a cap, a scenario with three
+   * sentences instead of two pushes the cards off the bottom of the screen
+   * while the intrusion track is running — a content edit silently breaking
+   * gameplay. Five lines fit; anything longer scrolls inside the card and
+   * the cards stay where they are. */
   .threat p {
-    font-size: 13px;
+    font-size: 12.5px;
     line-height: 1.42;
+    max-height: 7.2em;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .threat-top {
     gap: 6px;
@@ -917,10 +929,10 @@
   }
 
   .pillars {
-    gap: 8px;
+    gap: 7px;
   }
   .pill {
-    padding: 9px 11px;
+    padding: 8px 11px 9px;
   }
   .pill-top {
     margin-bottom: 4px;
@@ -956,11 +968,14 @@
 @media (max-height: 520px) and (min-width: 700px) {
   /* Landscape phone: 390px of height and 844px of width.
    *
-   * A two-column board was tried first and was worse — squeezing the
-   * cards into a 340px column made them tall enough that the third one
-   * still fell off the bottom. Full-width instead: the threat card gets
-   * wide enough to lose two lines, and the three cards go side by side,
-   * which is the one layout where everything fits above the fold. */
+   * A two-column board was tried first and was worse — squeezing the cards
+   * into a 340px column made them tall enough that the third still fell off
+   * the bottom. Full width instead: the threat card gets wide enough to lose
+   * two lines, and the three cards go side by side. Everything else in this
+   * block is buying the last twenty pixels so that all three are reachable
+   * without scrolling, because the intrusion track advances while a player
+   * scrolls.
+   */
   .board {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
@@ -970,82 +985,108 @@
       'ops'
       'comms';
   }
-  .ops {
-    margin-top: 9px;
+  .hud {
+    margin-bottom: 8px;
   }
-  .comms {
-    margin-top: 9px;
-    max-height: 96px;
+
+  /* The clock moves onto the rail. The header row above it is 19px that the
+     third card needs more than the label does. */
+  .track {
+    margin-bottom: 7px;
+  }
+  .track-head {
+    position: absolute;
+    top: 50%;
+    right: 96px;
+    transform: translateY(-50%);
+    margin: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .track-head .label {
+    display: none;
+  }
+  .track-clock {
+    font-size: 11px;
+  }
+  .track-rail {
+    height: 28px;
+  }
+
+  .estate {
+    gap: 3px;
+    margin-bottom: 7px;
+  }
+  .sys {
+    padding: 4px 4px 3px;
+  }
+  .sys .sys-ico {
+    display: none;
+  }
+  .sys .sys-short {
+    font-size: 8px;
+    line-height: 1.15;
+  }
+  .sys .sys-state {
+    font-size: 7px;
+    margin-top: 0;
+    line-height: 1.2;
+  }
+
+  .threat {
+    padding: 8px 12px 9px;
+    margin-bottom: 7px;
+  }
+  .threat h2 {
+    font-size: 16.5px;
+    margin-bottom: 3px;
+  }
+  .threat-top {
+    margin-bottom: 5px;
+  }
+  .threat-top .chip,
+  .threat-top .threat-level {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+  /* The 62ch measure is right for reading a paragraph and wrong here: at
+     844px it holds the description to four lines when the width is available
+     to set it in two, and those two lines are the difference between the
+     cards being on screen and not. */
+  .threat p {
+    font-size: 12.5px;
+    line-height: 1.4;
+    max-width: none;
+  }
+
+  .picks-label {
+    margin-bottom: 5px;
   }
   .pillars {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
   }
-  .track-head {
-    margin-bottom: 2px;
-  }
-  .track-rail {
-    height: 26px;
-  }
-  .sys {
-    padding: 3px 4px 2px;
-  }
-  .sys .sys-short {
-    font-size: 7.5px;
-  }
-  .sys .sys-state {
-    font-size: 7px;
-    margin-top: 1px;
-  }
-  /* The 62ch measure is right for reading a paragraph and wrong here: at
-     844px it holds the description to four lines when the width is
-     available to set it in two, and those two lines are the difference
-     between the cards being on screen and not. */
-  .threat p {
-    max-width: none;
-  }
   .pill {
-    padding: 9px 10px;
+    padding: 8px 10px 9px;
+  }
+  .pill-top {
+    margin-bottom: 3px;
   }
   .pill-hint {
     display: none;
   }
   .pill-act {
     font-size: 12.5px;
-    line-height: 1.35;
+    line-height: 1.3;
   }
-  .track-rail {
-    height: 30px;
-  }
-  .track {
-    margin-bottom: 8px;
-  }
-  .estate {
-    margin-bottom: 8px;
-  }
-  .sys {
-    padding: 5px 4px 4px;
-  }
-  .sys .sys-ico {
-    display: none;
-  }
-  .threat {
-    padding: 10px 12px;
-    margin-bottom: 8px;
-  }
-  .threat h2 {
-    font-size: 17px;
-    margin-bottom: 4px;
-  }
-  .threat p {
-    font-size: 12.5px;
-    line-height: 1.4;
-  }
+
   .ops {
+    margin-top: 8px;
     margin-bottom: 8px;
   }
   /* The feed is atmosphere. On a landscape phone the cards are the game. */
   .comms {
-    max-height: 108px;
+    margin-top: 8px;
+    max-height: 96px;
   }
 }

@@ -58,10 +58,27 @@ let stageScreen = null;
 let completed = false;
 let started = false;
 
+/* Two independent reasons the clock should not be running. Tracked
+ * separately because either one clearing the other is a bug you only see
+ * as "the timer kept going while I was reading the rules". */
+let tabHidden = false;
+let modalDepth = 0;
+
 const app = {
   data: DATA,
   audio,
   field,
+
+  /* Read by the stage loop every frame. */
+  get paused() {
+    return tabHidden || modalDepth > 0;
+  },
+  pushModal() {
+    modalDepth += 1;
+  },
+  popModal() {
+    modalDepth = Math.max(0, modalDepth - 1);
+  },
   get game() {
     return game;
   },
@@ -261,7 +278,13 @@ window.addEventListener('keydown', (e) => {
 });
 
 /* An abandoned run is a real signal — where people drop out is the only
- * thing that tells you whether a stage is too hard or too slow. */
+ * thing that tells you whether a stage is too hard or too slow.
+ *
+ * Only pagehide reports one. An earlier version also reported on the tab
+ * going to the background, which was wrong twice over: it counted every
+ * glance at a notification as an abandonment, and because it latched
+ * `completed` it then suppressed the completion event for a run the player
+ * came back and finished. Backgrounding pauses instead. */
 function reportAbandon() {
   if (!started || completed) return;
   completed = true;
@@ -275,8 +298,13 @@ function reportAbandon() {
   });
 }
 window.addEventListener('pagehide', reportAbandon);
+
+/* A phone in a pocket is not a player making a decision. requestAnimationFrame
+ * already stops while a tab is hidden, so this mostly guards the frame on
+ * the way back — but it also covers the case where the browser keeps
+ * ticking a background tab. */
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') reportAbandon();
+  tabHidden = document.visibilityState === 'hidden';
 });
 
 /* Automation hooks.

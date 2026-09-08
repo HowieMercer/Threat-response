@@ -110,7 +110,11 @@ export function createStageScreen(app) {
   /* ----------------------------------------------------------- the loop */
 
   function loop(t) {
-    const dt = Math.min(50, t - lastFrame || 16);
+    /* Clamped, and reset to zero while paused. Without the clamp a
+     * backgrounded tab returns with a multi-second delta and the attacker
+     * teleports across the track; without the pause, opening the rules
+     * mid-stage costs you the stage. */
+    const dt = app.paused ? 0 : Math.min(50, t - lastFrame || 16);
     lastFrame = t;
 
     if (game.state.phase === PHASE.STAGE) game.tick(dt);

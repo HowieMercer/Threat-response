@@ -9,7 +9,7 @@ import { CONFIG, VERSION, STAGE_SECONDS } from '../config.js';
 import { SCAN_COST, HOLD_COST } from '../engine/game.js';
 import { RANKS, DEFENSE_CAP } from '../engine/scoring.js';
 
-function modal(title, body, { wide = false } = {}) {
+function modal(title, body, { wide = false, app = null } = {}) {
   const close = h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Close' }, 'Close');
   const panel = h('div', {
     class: 'sheet' + (wide ? ' wide' : ''),
@@ -23,9 +23,20 @@ function modal(title, body, { wide = false } = {}) {
   const back = h('div', { class: 'scrim' }, panel);
 
   const prevFocus = document.activeElement;
+
+  /* Reading the rules must not cost you the stage. The intrusion track is
+   * real time, so anything that covers the board stops the clock. The app
+   * counts nesting, so closing one modal while another is open does not
+   * start it again. */
+  let shutOnce = false;
+  if (app) app.pushModal();
+
   function shut() {
+    if (shutOnce) return;
+    shutOnce = true;
     back.remove();
     document.removeEventListener('keydown', onKey);
+    if (app) app.popModal();
     if (prevFocus && prevFocus.focus) prevFocus.focus({ preventScroll: true });
   }
   function onKey(e) {
@@ -99,7 +110,7 @@ export function openHelp(app) {
       h('p', { class: 'sheet-foot' },
         `Threat Response ${VERSION}. Technique IDs and tactic names are MITRE ATT&CK as published. No figure anywhere in this game is estimated or invented.`)
     ),
-    { wide: true }
+    { wide: true, app }
   );
 }
 
@@ -177,6 +188,6 @@ export function openStats(app) {
       h('p', { class: 'sheet-foot' },
         'The storage key has not moved since v8 on purpose. Changing it orphans every leaderboard entry and captured lead on every device already in the field.')
     ),
-    { wide: true }
+    { wide: true, app }
   );
 }
