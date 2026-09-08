@@ -1,0 +1,382 @@
+/* Monte Carlo answer-key report.
+ *
+ *   node scripts/monte-carlo.mjs [runs]        default 40000
+ *   node scripts/monte-carlo.mjs 40000 --json  machine-readable, for diffing
+ *
+ * Answers the question that decides whether the score is a diagnostic or a
+ * decoration: can somebody with no security knowledge reach a high rank?
+ *
+ * Six things it measures, each of which has been wrong at some point:
+ *
+ *   1. Blind-play rank distribution. If a coin flip reaches Threat Hunter,
+ *      the ladder means nothing.
+ *   2. Single-pillar strategies. "Always pick Secure" must not be
+ *      competitive, because "you cannot win with one product" is the
+ *      commercial argument and it has to be true in the numbers.
+ *   3. Positional heuristics. v9 shipped a pool where stage position gave
+ *      the answer away.
+ *   4. TYPOGRAPHIC heuristics. v13 shipped a pool where the correct `act`
+ *      string was the longest one 85% of the time and the only one
+ *      containing a comma. Worse than a positional tell, because it needs
+ *      no knowledge at all and it is visible at a glance.
+ *   5. Per-pillar and per-stage-position correctness spread, so a
+ *      deducible pattern shows up as a lumpy table rather than as a
+ *      complaint at a stand.
+ *   6. Readiness card marginal value, measured against an attentive
+ *      non-expert. A card worth nothing is a dead choice; a pair that
+ *      reaches 100% is a solved game.
+ *
+ * The player model matters. Runs are played in timed mode by someone who
+ * takes 3.4s +/- 1.3s to read a card, because pacing measured against an
+ * instant player is not measured at all — that mistake once reported a
+ * strategy at 80% that was really at 48%.
+ */
+
+import { register } from 'node:module';
+import { pathToFileURL } from 'node:url';
+
+register(
+  'data:text/javascript,' + encodeURIComponent(`
+  export async function resolve(spec, ctx, next) {
+    const r = await next(spec, ctx);
+    if (r.url.endsWith('.json')) return { ...r, format: 'json', importAttributes: { type: 'json' } };
+    return r;
+  }
+`),
+  pathToFileURL('./')
+);
+
+const { DATA } = await import('../src/data/index.js');
+const { createGame, PHASE } = await import('../src/engine/game.js');
+const { PILLARS } = await import('../src/engine/pillars.js');
+const { rightBackupFor } = await import('../src/engine/resolve.js');
+const { isContained, isMitigated, RANKS } = await import('../src/engine/scoring.js');
+
+const RUNS = Number(process.argv.find((a) => /^\d+$/.test(a)) || 40000);
+const asJson = process.argv.includes('--json');
+
+const rnd = (n) => Math.floor(Math.random() * n);
+const jitter = (b, s) => b + (Math.random() * 2 - 1) * s;
+const READ_MS = 3400, READ_SPREAD = 1300, BACKUP_MS = 1200, SCAN_MS = 700;
+const INJECT_HIT = 0.72, TICK = 50;
+
+/* The player model has to USE the mechanics, or a card that acts on one of
+ * them measures as worthless and the measurement gets mistaken for the
+ * card. That has now happened twice in this project: once measuring scan in
+ * learn mode where the clock does not move, and once measuring a card that
+ * reveals information with a strategy that ignored it. `wantsHold` exists
+ * because the third time was a card that makes isolating free, measured by
+ * a player who never isolated. */
+function play(strategy, { posture = [], wantsScan = false, wantsHold = false, readMs = READ_MS } = {}) {
+  const g = createGame({ data: DATA, seed: (Math.random() * 4294967296) >>> 0, mode: 'timed' });
+  for (const id of posture) g.togglePosture(id);
+  g.begin();
+  for (let stage = 0; stage < 5; stage++) {
+    if (g.state.phase === PHASE.CLIMAX) g.climaxGo();
+    let t = 0, lead = null, scanned = !wantsScan, injectAt = null, willHit = false, held = !wantsHold;
+    for (let i = 0; i < 4000 && g.state.phase === PHASE.STAGE; i++) {
+      if (g.state.inject && injectAt === null) {
+        willHit = Math.random() < INJECT_HIT;
+        injectAt = t + (willHit ? jitter(900, 300) : 1e9);
+      }
+      if (g.state.inject && injectAt !== null && t >= injectAt) { g.resolveInject(willHit); injectAt = null; }
+      if (!scanned && t >= SCAN_MS) { scanned = true; g.scan(); }
+      /* Isolate once, after reading, before committing — which is when a
+       * player who is behind on the track actually reaches for it. */
+      if (!held && t >= readMs - 600) { held = true; g.hold(); }
+      if (!lead && t >= readMs) { lead = strategy(g.state, 'lead', null); g.choose(lead); }
+      else if (lead && !g.state.backup && t >= readMs + BACKUP_MS) {
+        let b = strategy(g.state, 'backup', lead);
+        if (b === lead) b = PILLARS.find((p) => p !== lead);
+        g.choose(b);
+      }
+      g.tick(TICK); t += TICK;
+    }
+    if (g.state.phase === PHASE.STAGE) throw new Error('stage did not resolve');
+    g.nextStage();
+  }
+  return g.summary();
+}
+
+/* ─────────────────────────────────────────────────────── strategies ─── */
+
+const random = (s, slot, lead) => {
+  const o = slot === 'lead' ? PILLARS : PILLARS.filter((p) => p !== lead);
+  return o[rnd(o.length)];
+};
+const avoidWeak = (s, slot, lead) => {
+  if (!s.revealed.weak) return random(s, slot, lead);
+  const weak = PILLARS.find((p) => s.variant.rank[p] === 'weak');
+  const o = (slot === 'lead' ? PILLARS : PILLARS.filter((p) => p !== lead)).filter((p) => p !== weak);
+  return (o.length ? o : PILLARS.filter((p) => p !== lead))[rnd(o.length || 2)];
+};
+/* The typographic exploits. These read the copy, not the ranks — which is
+ * exactly what a player at a stand can do in the two seconds they have. */
+const longestAct = (s, slot, lead) => {
+  const o = slot === 'lead' ? PILLARS : PILLARS.filter((p) => p !== lead);
+  return o.reduce((a, b) => (s.variant.act[b].length > s.variant.act[a].length ? b : a));
+};
+const mostCommas = (s, slot, lead) => {
+  const o = slot === 'lead' ? PILLARS : PILLARS.filter((p) => p !== lead);
+  const c = (p) => (s.variant.act[p].match(/,/g) || []).length;
+  const max = Math.max(...o.map(c));
+  const top = o.filter((p) => c(p) === max);
+  return top[rnd(top.length)];
+};
+const expert = (s, slot) => {
+  const best = PILLARS.find((p) => s.variant.rank[p] === 'best');
+  return slot === 'lead' ? best : rightBackupFor(s.variant, best);
+};
+
+const STRATEGIES = [
+  { name: 'blind — uniform random', fn: random, blind: true },
+  { name: 'always Manage', fn: (s, slot) => (slot === 'lead' ? 'manage' : 'secure') },
+  { name: 'always Secure', fn: (s, slot) => (slot === 'lead' ? 'secure' : 'recover') },
+  { name: 'always Recover', fn: (s, slot) => (slot === 'lead' ? 'recover' : 'manage') },
+  {
+    name: 'positional heuristic',
+    fn: (s, slot, lead) => {
+      const early = s.stageIndex <= 1;
+      if (slot === 'lead') return early ? 'manage' : 'recover';
+      return early ? 'secure' : lead === 'recover' ? 'secure' : 'recover';
+    },
+  },
+  { name: 'longest act string', fn: longestAct, exploit: true },
+  { name: 'most commas in act', fn: mostCommas, exploit: true },
+  /* Closer to a real first-time player than uniform random: reads the
+   * card, has no security knowledge, uses the free look the game offers.
+   * Reported because the 35-45% invariant sits between this number and the
+   * uniform-random one, so which player "blind" means decides the verdict. */
+  { name: 'naive reader', fn: avoidWeak, wantsScan: true, wantsHold: true },
+  { name: 'scan then guess', fn: avoidWeak, wantsScan: true },
+  { name: 'expert — perfect stack', fn: expert },
+];
+
+/* ──────────────────────────────────────────────────────── measure ───── */
+
+/* Collected only for the blind strategy, to build the threshold table. */
+const blindDefense = [];
+
+function measure(strat, n) {
+  const rankCount = {};
+  const leadRank = { best: 0, partial: 0, weak: 0, none: 0 };
+  /* Correctness by pillar chosen and by stage position: a deducible
+   * pattern shows up here as a lumpy row. */
+  const byPillar = Object.fromEntries(PILLARS.map((p) => [p, { picked: 0, best: 0 }]));
+  const byStage = Array.from({ length: 5 }, () => ({ picked: 0, best: 0 }));
+  let hunter = 0, champ = 0, contained = 0, index = 0, closed = 0, unanswered = 0, stages = 0, score = 0;
+  /* Defense points and surviving systems are separate axes from the index.
+   * The index is computed from stage outcomes alone, so a readiness card
+   * that brings systems back cannot move it — measuring such a card by
+   * index reports it as dead when it is not. */
+  let defense = 0, systemsLost = 0;
+
+  for (let i = 0; i < n; i++) {
+    const s = play(strat.fn, strat);
+    if (s.defense >= RANKS.find((r) => r.name === 'Threat Hunter').min) hunter++;
+    if (s.defense >= 10) champ++;
+    contained += s.rounds.filter((r) => isContained(r.outcome)).length;
+    index += s.index;
+    score += s.score;
+    if (s.business === 'closed') closed++;
+    defense += s.defense;
+    if (strat.blind) blindDefense.push(s.defense);
+    systemsLost += Object.values(s.estate).filter((v) => v <= 0).length;
+    rankCount[s.rank.name] = (rankCount[s.rank.name] || 0) + 1;
+    for (const r of s.rounds) {
+      stages++;
+      if (!r.lead) { unanswered++; leadRank.none++; continue; }
+      const rk = r.rank[r.lead];
+      leadRank[rk]++;
+      byPillar[r.lead].picked++;
+      if (rk === 'best') byPillar[r.lead].best++;
+      byStage[r.stage - 1].picked++;
+      if (rk === 'best') byStage[r.stage - 1].best++;
+    }
+  }
+  return {
+    name: strat.name,
+    exploit: !!strat.exploit,
+    hunter: (hunter / n) * 100,
+    champ: (champ / n) * 100,
+    contained: contained / n,
+    index: index / n,
+    score: Math.round(score / n),
+    closed: (closed / n) * 100,
+    defense: defense / n,
+    systemsLost: systemsLost / n,
+    unanswered: (unanswered / stages) * 100,
+    leadRank,
+    byPillar,
+    byStage,
+    rankCount,
+    n,
+  };
+}
+
+const per = Math.max(300, Math.floor(RUNS / STRATEGIES.length));
+const rows = STRATEGIES.map((s) => measure(s, per));
+const byName = Object.fromEntries(rows.map((r) => [r.name, r]));
+const blind = byName['blind — uniform random'];
+
+/* Readiness cards: marginal value against an attentive non-expert, which
+ * is the player who actually buys one. */
+const CARD_RUNS = Math.max(200, Math.floor(per / 3));
+const CARD_PLAYER = { fn: avoidWeak, wantsScan: true, wantsHold: true };
+const cardBase = measure({ name: 'no cards', ...CARD_PLAYER }, CARD_RUNS);
+const cards = DATA.postures.cards.map((c) => {
+  const m = measure({ name: c.id, ...CARD_PLAYER, posture: [c.id] }, CARD_RUNS);
+  return {
+    id: c.id, pillar: c.pillar, ...m,
+    dIndex: m.index - cardBase.index,
+    dHunter: m.hunter - cardBase.hunter,
+    dClosed: m.closed - cardBase.closed,
+    dDefense: m.defense - cardBase.defense,
+    dLost: m.systemsLost - cardBase.systemsLost,
+  };
+});
+/* Every legal pair, so a solved combination cannot hide. */
+const PAIRS = [];
+for (let i = 0; i < DATA.postures.cards.length; i++) {
+  for (let j = i + 1; j < DATA.postures.cards.length; j++) {
+    const a = DATA.postures.cards[i], b = DATA.postures.cards[j];
+    const samePillar = a.pillar === b.pillar;
+    if (samePillar && DATA.postures.maxPerPillar < 2) continue;
+    const m = measure({ name: `${a.id}+${b.id}`, ...CARD_PLAYER, posture: [a.id, b.id] }, Math.floor(CARD_RUNS / 2));
+    PAIRS.push({ pair: `${a.id} + ${b.id}`, hunter: m.hunter, champ: m.champ, index: m.index });
+  }
+}
+PAIRS.sort((a, b) => b.hunter - a.hunter);
+
+/* ───────────────────────────────────────────────────────── report ───── */
+
+if (asJson) {
+  console.log(JSON.stringify({ runs: per * STRATEGIES.length, perStrategy: per, rows, cards, pairs: PAIRS.slice(0, 8) }, null, 2));
+  process.exit(0);
+}
+
+const pad = (s, n) => String(s).padEnd(n);
+const num = (v, n, d = 1) => v.toFixed(d).padStart(n);
+
+console.log(`\nThreat Response — Monte Carlo answer-key report`);
+console.log(`${(per * STRATEGIES.length).toLocaleString()} runs total, ${per.toLocaleString()} per strategy`);
+console.log(`Timed mode, simulated read time ${(READ_MS / 1000).toFixed(1)}s +/- ${(READ_SPREAD / 1000).toFixed(1)}s\n`);
+
+console.log(pad('strategy', 24), 'Hunter+', ' Champ', 'contained', ' index', ' closed', 'no-answer');
+console.log('-'.repeat(84));
+for (const r of rows) {
+  console.log(
+    pad(r.name, 24), num(r.hunter, 6) + '%', num(r.champ, 5) + '%',
+    num(r.contained, 8, 2) + '/5', num(r.index, 6), num(r.closed, 6) + '%', num(r.unanswered, 8) + '%'
+  );
+}
+
+console.log('\nlead-pick quality — a strategy that knows nothing should sit at 33/33/33');
+console.log('-'.repeat(84));
+for (const r of rows) {
+  const t = r.leadRank.best + r.leadRank.partial + r.leadRank.weak;
+  console.log(
+    pad(r.name, 24),
+    `best ${num((r.leadRank.best / t) * 100, 5)}%`,
+    `partial ${num((r.leadRank.partial / t) * 100, 5)}%`,
+    `weak ${num((r.leadRank.weak / t) * 100, 5)}%`
+  );
+}
+
+console.log('\nblind play: correctness spread — lumpy means deducible');
+console.log('-'.repeat(84));
+console.log('  by pillar chosen  ', PILLARS.map((p) => `${p} ${num((blind.byPillar[p].best / blind.byPillar[p].picked) * 100, 5)}%`).join('   '));
+console.log('  by stage position ', blind.byStage.map((s, i) => `s${i + 1} ${num((s.best / s.picked) * 100, 5)}%`).join('  '));
+
+console.log('\nblind play: rank distribution');
+console.log('-'.repeat(84));
+for (const rank of RANKS) {
+  const n = blind.rankCount[rank.name] || 0;
+  console.log('  ' + pad(rank.name, 22) + num((n / blind.n) * 100, 6) + '%' + (n === 0 ? '   <- NEVER REACHED' : ''));
+}
+
+/* The 35-45% invariant is a statement about the rank LADDER, not about the
+ * answer key, and the two are worth separating. Uniform-random play averages
+ * 5 defense points because a coin flip gets `best` a third of the time, so
+ * where the Threat Hunter line sits decides the number entirely. This table
+ * is the lever: it says what each threshold would produce, so the decision
+ * is one edit to RANKS in scoring.js and not a rebalance of the pool. */
+console.log('\nwhere the Threat Hunter line lands blind play (currently 7)');
+console.log('-'.repeat(84));
+console.log('  defense pts  ' + [4, 5, 6, 7, 8].map((t) => 't>=' + t).join('      '));
+console.log('  blind at+    ' + [4, 5, 6, 7, 8].map((t) => {
+  const share = blindDefense.filter((d) => d >= t).length / blindDefense.length;
+  return num(share * 100, 5) + '%';
+}).join('    '));
+
+console.log(`\nreadiness cards — marginal value, ${CARD_RUNS.toLocaleString()} runs each, attentive non-expert`);
+console.log('-'.repeat(84));
+console.log('  ' + pad('baseline, no cards', 25) +
+  `index ${num(cardBase.index, 5)}  defense ${num(cardBase.defense, 4, 2)}  lost ${num(cardBase.systemsLost, 4, 2)}  closed ${num(cardBase.closed, 5)}%`);
+const sign = (v, d = 1) => (v >= 0 ? '+' : '') + v.toFixed(d);
+for (const c of [...cards].sort((a, b) => b.dIndex - a.dIndex)) {
+  console.log(
+    '  ' + pad(c.id, 17) + pad(c.pillar, 8) +
+    `index ${num(c.index, 5)} (${pad(sign(c.dIndex), 6)})  ` +
+    `defense ${num(c.defense, 4, 2)} (${pad(sign(c.dDefense, 2), 6)})  ` +
+    `lost ${num(c.systemsLost, 4, 2)} (${pad(sign(c.dLost, 2), 6)})  ` +
+    `closed ${num(c.closed, 5)}% (${sign(c.dClosed)})`
+  );
+}
+
+console.log('\nreadiness pairs — the strongest legal two-card builds');
+console.log('-'.repeat(84));
+for (const p of PAIRS.slice(0, 5)) {
+  console.log('  ' + pad(p.pair, 40) + `Hunter+ ${num(p.hunter, 5)}%  Champ ${num(p.champ, 5)}%  index ${num(p.index, 5)}`);
+}
+
+console.log('\nchecks');
+console.log('-'.repeat(84));
+const singles = rows.filter((r) => r.name.startsWith('always'));
+const checks = [
+  ['blind play reaches Threat Hunter in the 35-45% band', blind.hunter >= 35 && blind.hunter <= 45,
+   `${blind.hunter.toFixed(1)}%`],
+  ['blind Champion stays rare (under 5%)', blind.champ < 5, `${blind.champ.toFixed(2)}%`],
+  ['expert play reaches Champion reliably', byName['expert — perfect stack'].champ > 90,
+   `${byName['expert — perfect stack'].champ.toFixed(1)}%`],
+  ['no single pillar beats blind by more than 10 points',
+   Math.max(...singles.map((r) => r.hunter)) - blind.hunter < 10,
+   `+${(Math.max(...singles.map((r) => r.hunter)) - blind.hunter).toFixed(1)}`],
+  ['positional heuristic beats blind by under 10 points',
+   byName['positional heuristic'].hunter - blind.hunter < 10,
+   `+${(byName['positional heuristic'].hunter - blind.hunter).toFixed(1)}`],
+  ['LONGEST-ACT heuristic beats blind by under 10 points',
+   byName['longest act string'].hunter - blind.hunter < 10,
+   `+${(byName['longest act string'].hunter - blind.hunter).toFixed(1)}`],
+  ['MOST-COMMAS heuristic beats blind by under 10 points',
+   byName['most commas in act'].hunter - blind.hunter < 10,
+   `+${(byName['most commas in act'].hunter - blind.hunter).toFixed(1)}`],
+  ['scan-and-guess is not a winning strategy', byName['scan then guess'].hunter < 60,
+   `${byName['scan then guess'].hunter.toFixed(1)}%`],
+  /* Reachability is a property of the ladder, not of blind play — blind
+   * Champion is meant to be near-impossible, so testing it empirically at
+   * this sample size measured noise. Checked across every strategy in the
+   * report instead. */
+  ['every rank reached by some strategy in this report',
+   RANKS.every((r) => rows.some((row) => (row.rankCount[r.name] || 0) > 0)),
+   RANKS.filter((r) => !rows.some((row) => (row.rankCount[r.name] || 0) > 0)).map((r) => r.name).join(' ') || 'all'],
+  /* Live on ANY axis. Different cards act on different quantities and
+   * scoring them all by the index is what reported three of six as dead
+   * when two of them were only invisible. */
+  ['every readiness card is a live choice on some axis',
+   cards.every((c) => c.dIndex >= 3 || Math.abs(c.dClosed) >= 8 || c.dDefense >= 0.4 || c.dLost <= -0.35),
+   cards.filter((c) => !(c.dIndex >= 3 || Math.abs(c.dClosed) >= 8 || c.dDefense >= 0.4 || c.dLost <= -0.35)).map((c) => c.id).join(' ') || 'all live'],
+  ['no two-card build solves the run (Champion under 25%)',
+   PAIRS.every((p) => p.champ < 25), `worst ${Math.max(...PAIRS.map((p) => p.champ)).toFixed(1)}%`],
+  ['all three pillars correct at some stage position',
+   PILLARS.every((p) => DATA.scenarios.stages.some((st) => st.variants.some((v) => v.rank[p] === 'best'))), ''],
+  ['a reading player is not timed out of stages', blind.unanswered < 6,
+   `${blind.unanswered.toFixed(1)}%`],
+];
+let failed = 0;
+for (const [label, ok, detail] of checks) {
+  console.log(`  ${ok ? 'pass' : 'FAIL'}  ${pad(label, 62)} ${detail}`);
+  if (!ok) failed++;
+}
+console.log('');
+process.exit(failed ? 1 : 0);

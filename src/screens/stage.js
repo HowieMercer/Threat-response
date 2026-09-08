@@ -146,11 +146,9 @@ export function createStageScreen(app) {
         case 'stage':
           break;
         case 'scan':
-          pillars.reveal({ weak: ev.weak, best: ev.best });
+          pillars.reveal({ weak: ev.weak });
           app.audio.scan();
-          announce(ev.best
-            ? `Scan complete. Weakest layer is ${DEF[ev.weak].name}. Strongest is ${DEF[ev.best].name}.`
-            : `Scan complete. Weakest layer is ${DEF[ev.weak].name}.`);
+          announce(`Scan complete. ${DEF[ev.weak].name} is the weakest layer here. The other two are still a decision.`);
           refreshOps();
           break;
         case 'hold':
@@ -215,11 +213,17 @@ export function createStageScreen(app) {
     [...capPips.children].forEach((p, i) => p.classList.toggle('spent', i >= s.capacity));
     capPips.parentElement.setAttribute('aria-label', `${s.capacity} response capacity remaining`);
 
-    const freeScan = s.posture.has('soc-watch') && !s.freeScanUsed;
+    const freeScan = s.posture.has('soc-watch') && s.freeScans > 0;
     scanBtn.classList.toggle('free', freeScan);
-    scanBtn.querySelector('.cost').textContent = freeScan ? 'FREE' : String(SCAN_COST);
+    /* Shows how many are left, because "which stage do I spend it on" is
+     * the decision the card exists to create. */
+    scanBtn.querySelector('.cost').textContent = freeScan ? `FREE ×${s.freeScans}` : String(SCAN_COST);
     scanBtn.disabled = s.revealed.weak || (!freeScan && s.capacity < SCAN_COST);
-    holdBtn.disabled = s.capacity < HOLD_COST || s.mode === 'learn';
+
+    const freeHold = s.posture.has('asset-inventory') && !s.freeHoldUsed;
+    holdBtn.classList.toggle('free', freeHold);
+    holdBtn.querySelector('.cost').textContent = freeHold ? 'FREE' : String(HOLD_COST);
+    holdBtn.disabled = (!freeHold && s.capacity < HOLD_COST) || s.mode === 'learn';
     holdBtn.title = s.mode === 'learn' ? 'No timer in learn mode — nothing to take back' : 'Isolate a segment and take ground back (H)';
   }
 

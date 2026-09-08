@@ -106,6 +106,56 @@ describe('answer key cannot be solved by stage position', () => {
   });
 });
 
+describe('the copy carries no answer', () => {
+  /* v13 shipped a pool where the `act` string a player reads at the moment
+   * of choosing gave the answer away typographically: `best` averaged 61
+   * characters with exactly one comma, `partial` and `weak` averaged 51
+   * with none. "Pick the longest" was correct 85% of the time and "pick the
+   * one with a comma" was correct 10 times out of 10 where it was a unique
+   * signal — no security knowledge required, and visible at a glance in the
+   * two seconds a player at a stand actually has.
+   *
+   * This is the same class of failure as v9's positional pattern, arriving
+   * through the copy instead of the ranks, so it gets the same treatment:
+   * a test rather than a note. */
+  const actsBy = (rank) =>
+    allVariants.flatMap((v) => PILLARS.filter((p) => v.rank[p] === rank).map((p) => v.act[p]));
+  const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+
+  it('does not make the correct action the longest one', () => {
+    const wins = allVariants.filter((v) => {
+      const longest = PILLARS.reduce((a, b) => (v.act[b].length > v.act[a].length ? b : a));
+      return v.rank[longest] === 'best';
+    }).length;
+    /* 1/3 of 20 is 6.7. Allow up to 11 (55%) — enough headroom that adding
+     * one variant cannot fail the build on noise, tight enough that the
+     * 85% v13 shipped would. */
+    expect(wins, `longest-action heuristic wins ${wins}/20`).toBeLessThanOrEqual(11);
+  });
+
+  it('keeps action length uncorrelated with correctness', () => {
+    const b = mean(actsBy('best').map((a) => a.length));
+    const rest = mean([...actsBy('partial'), ...actsBy('weak')].map((a) => a.length));
+    expect(Math.abs(b - rest), `best ${b.toFixed(1)} vs rest ${rest.toFixed(1)} chars`).toBeLessThan(4);
+  });
+
+  it('gives no rank a punctuation signature', () => {
+    /* Any punctuation that could mark one card out, not just commas. */
+    const marks = (a) => (a.match(/[,;:—–]/g) || []).length;
+    const per = ['best', 'partial', 'weak'].map((r) => mean(actsBy(r).map(marks)));
+    const spread = Math.max(...per) - Math.min(...per);
+    expect(spread, `punctuation per rank: ${per.map((x) => x.toFixed(2)).join(' / ')}`).toBeLessThan(0.35);
+  });
+
+  it('keeps every action short enough to read under time pressure', () => {
+    for (const v of allVariants) {
+      for (const p of PILLARS) {
+        expect(v.act[p].length, `${v.tech}/${p}`).toBeLessThanOrEqual(56);
+      }
+    }
+  });
+});
+
 describe('the two-pick mechanic', () => {
   it('always resolves a backup that is a different pillar from the lead', () => {
     for (const v of allVariants) {

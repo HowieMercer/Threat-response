@@ -51,6 +51,16 @@ export const HOLD_PUSHBACK = 18;
  * not to scan is having no capacity left. */
 export const SCAN_DEPTH_COST = 8;
 
+/* Free scans granted by 24/7 monitored response.
+ *
+ * v13 gave one free scan every stage, which measured at +33.0 index —
+ * roughly three times the next strongest card — and removed the only
+ * interesting part of holding a free scan, which is deciding which stage to
+ * spend it on. Three across a five-stage run keeps it the strongest single
+ * investment, which is commercially correct for MDR, without making the
+ * other five cards decoration. */
+export const SOC_FREE_SCANS = 3;
+
 /* Committing a lead does not stop the clock. It slows it, because you have
  * started responding. Deliberately the same slowdown whether the lead was
  * right or wrong: a track that speeds up on a bad pick would leak the
@@ -140,10 +150,11 @@ export function createGame({ data, seed, mode = 'timed' }) {
     variant: null,
     depth: 0,
     capacity: CAPACITY_START,
-    freeScanUsed: false,
+    freeScans: 0,
+    freeHoldUsed: false,
     lead: null,
     backup: null,
-    revealed: { weak: false, best: false },
+    revealed: { weak: false },
     estate: Object.fromEntries(data.estate.systems.map((s) => [s.id, 2])),
     streak: 0,
     inject: null,
@@ -208,6 +219,7 @@ export function createGame({ data, seed, mode = 'timed' }) {
       state.estate = Object.fromEntries(data.estate.systems.map((s) => [s.id, 2]));
       state.streak = 0;
       state.capacity = CAPACITY_START + (posture.has('patch-cadence') ? 1 : 0);
+      state.freeScans = posture.has('soc-watch') ? SOC_FREE_SCANS : 0;
       state.opener = pick(rand, data.foe.openers);
       state.startedAt = Date.now();
       enterStage();
@@ -242,44 +254,56 @@ export function createGame({ data, seed, mode = 'timed' }) {
 
     /* ---------------------------------------------------------- actions */
 
-    /* Reveal the weakest layer for this scenario, and the strongest too if
-     * the player invested in knowing what they own. It never reveals the
-     * best layer for free — visibility narrows the field, it does not hand
-     * over the answer. */
+    /* Reveal the weakest layer for this scenario. Never the strongest, by
+     * anybody, for any price.
+     *
+     * v13 let the asset-inventory readiness card reveal `best` as well, and
+     * paired with the free scan from soc-watch that reached index 96.6 and
+     * Threat Hunter 100% of the time — two of three budget points, played
+     * by someone with no security knowledge. A card that reveals the
+     * correct answer is a card that deletes the game. Visibility narrows
+     * the field; it does not hand over the answer. */
     scan() {
       if (state.phase !== PHASE.STAGE) return false;
       if (state.revealed.weak) return false;
-      const free = posture.has('soc-watch') && !state.freeScanUsed;
+      const free = posture.has('soc-watch') && state.freeScans > 0;
       if (!free && state.capacity < SCAN_COST) {
         emit('blocked', { reason: 'No response capacity left this stage.' });
         return false;
       }
-      if (free) state.freeScanUsed = true;
+      if (free) state.freeScans -= 1;
       else state.capacity -= SCAN_COST;
 
       state.revealed.weak = true;
-      if (posture.has('asset-inventory')) state.revealed.best = true;
       if (state.mode !== 'learn') state.depth = Math.min(100, state.depth + SCAN_DEPTH_COST);
       emit('scan', {
         weak: PILLARS.find((p) => state.variant.rank[p] === 'weak'),
-        best: state.revealed.best ? PILLARS.find((p) => state.variant.rank[p] === 'best') : null,
         free,
       });
       return true;
     },
 
     /* Buy ground back. Containment is time, and time is the only thing
-     * this stage is actually made of. */
+     * this stage is actually made of.
+     *
+     * A complete asset inventory makes the first isolate of each stage
+     * free: knowing exactly what you own is what lets you cut a segment off
+     * without spending an analyst working out what is on it. That splits
+     * the two Manage/Secure information cards cleanly — soc-watch buys
+     * information, asset-inventory buys time — and it replaced an effect
+     * measured at +0.4 index, which is a dead choice on a board of six. */
     hold() {
       if (state.phase !== PHASE.STAGE) return false;
-      if (state.capacity < HOLD_COST) {
+      const free = posture.has('asset-inventory') && !state.freeHoldUsed;
+      if (!free && state.capacity < HOLD_COST) {
         emit('blocked', { reason: 'No response capacity left this stage.' });
         return false;
       }
-      state.capacity -= HOLD_COST;
+      if (free) state.freeHoldUsed = true;
+      else state.capacity -= HOLD_COST;
       const before = state.depth;
       state.depth = Math.max(0, state.depth - HOLD_PUSHBACK);
-      emit('hold', { from: before, to: state.depth });
+      emit('hold', { from: before, to: state.depth, free });
       return true;
     },
 
@@ -387,8 +411,8 @@ export function createGame({ data, seed, mode = 'timed' }) {
     state.lead = null;
     state.backup = null;
     state.injectHit = undefined;
-    state.revealed = { weak: false, best: false };
-    state.freeScanUsed = false;
+    state.revealed = { weak: false };
+    state.freeHoldUsed = false;
     state.inject = null;
     state.capacity = Math.min(CAPACITY_MAX, state.capacity + 1);
 
@@ -485,7 +509,9 @@ export function createGame({ data, seed, mode = 'timed' }) {
       posture: posture.list(),
       pillarsUsed: posture.pillarsUsed(),
       elapsed: state.finishedAt && state.startedAt ? state.finishedAt - state.startedAt : null,
-      business: businessOutcome(index, state.estate),
+      /* The vault is the one readiness card that changes the narrative
+       * outcome rather than the score — see businessOutcome. */
+      business: businessOutcome(index, state.estate, { vaultImmutable: posture.has('immutable-vault') }),
     };
   }
 
@@ -495,11 +521,28 @@ export function createGame({ data, seed, mode = 'timed' }) {
 /* Whether the business opens the next morning. Deliberately not a number:
  * every cost figure this game could print would be invented, and an
  * invented figure in front of a security professional costs more
- * credibility than it buys drama. The client's own words do the work. */
-export function businessOutcome(index, estate) {
+ * credibility than it buys drama. The client's own words do the work.
+ *
+ * `vaultImmutable` is the immutable-vault readiness card, and it is the
+ * only thing in the game that reaches this function. It does not touch the
+ * index, the defense points or the rank — the answer key is untouched — it
+ * changes whether the business closes. That is the literal product claim:
+ * a restore path a stolen credential cannot delete is what stands between
+ * a bad week and a closure. It converts a closure into a wounded survival,
+ * not into a good outcome; immutable backups mean you reopen, they do not
+ * mean nothing happened.
+ *
+ * The cost is that a player who buys the vault never sees "Harbour Dental
+ * closed after 32 years", which is the best beat in the asset. That is the
+ * right trade: the beat stays reachable for everyone who did not buy it,
+ * and the game now teaches the lesson by the contrast between two runs
+ * rather than by asserting it in copy. */
+export function businessOutcome(index, estate, { vaultImmutable = false } = {}) {
   const lost = Object.values(estate).filter((v) => v <= 0).length;
-  if (estate.backups <= 0 && index < 45) return 'closed';
-  if (index < 30) return 'closed';
+  if (!vaultImmutable) {
+    if (estate.backups <= 0 && index < 45) return 'closed';
+    if (index < 30) return 'closed';
+  }
   if (index < 55 || lost >= 2) return 'wounded';
   if (index >= 78 && lost === 0) return 'continuity';
   return 'open';

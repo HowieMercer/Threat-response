@@ -103,11 +103,32 @@ export function defensePoints(rounds, systemsLost) {
 
 /* Five stages at 2 points each is exactly the cap, so Resilience Champion
  * requires containing all five and losing no more than one system. It is
- * reachable and it is meant to be rare. */
+ * reachable and it is meant to be rare.
+ *
+ * ── Where the Threat Hunter line sits ────────────────────────────────────
+ *
+ * 6, not 7. The calibration target for this asset is that uniform-random
+ * play — someone with no security knowledge picking at random — reaches
+ * Threat Hunter or better 35-45% of the time. A coin flip gets `best` a
+ * third of the time and therefore averages 5 defense points, so the number
+ * is decided entirely by where this line sits, not by the scenario pool:
+ *
+ *     line at 4   5     6     7     8
+ *     blind     70%   54%   36%   20%    7%
+ *
+ * v13 shipped it at 7 and measured 20%, outside the band in the harsh
+ * direction. 6 measures 36%. Nothing about the answer key changed to get
+ * there — what protects the score from a knowledge-free player is the pool
+ * (a positional heuristic beats random by -6.6 points, a single pillar by
+ * +6.2, the copy-length heuristic by +3.4), and those are measured
+ * separately in scripts/monte-carlo.mjs.
+ *
+ * The band widths moved with it so no rank is left with a two-point window:
+ * Champion 10, Hunter 6-9, First Responder 3-5, Survivor 1-2, Phoenix 0. */
 export const RANKS = [
   { min: 10, name: 'Resilience Champion', blurb: 'Five stages held. The business never stopped trading.' },
-  { min: 7, name: 'Threat Hunter', blurb: 'You caught it moving and took ground back.' },
-  { min: 4, name: 'First Responder', blurb: 'You slowed it down and kept the business open.' },
+  { min: 6, name: 'Threat Hunter', blurb: 'You caught it moving and took ground back.' },
+  { min: 3, name: 'First Responder', blurb: 'You slowed it down and kept the business open.' },
   { min: 1, name: 'Breach Survivor', blurb: 'It got through. You are still here.' },
   { min: 0, name: 'The Phoenix', blurb: 'Everything burned. Start from the ashes.' },
 ];

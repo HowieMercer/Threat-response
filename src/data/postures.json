@@ -35,8 +35,8 @@
       "product": "N-central",
       "name": "Complete asset inventory",
       "desc": "Every device, account and service accounted for, reconciled against what is approved.",
-      "effect": "Scan reveals the strongest layer as well as the weakest.",
-      "recap": "You knew what you owned, so a scan told you where to lead instead of only where not to."
+      "effect": "The first isolate of every stage is free. It costs no capacity.",
+      "recap": "You knew exactly what you owned, so cutting a segment off never cost you an analyst."
     },
     {
       "id": "soc-watch",
@@ -44,8 +44,8 @@
       "product": "Adlumin MDR",
       "name": "24/7 monitored response",
       "desc": "Analysts watching the estate on the hours nobody on the payroll is awake for.",
-      "effect": "One free scan every stage. It costs no capacity.",
-      "recap": "Somebody was watching at 04:00, so you never spent your own capacity finding out what was happening."
+      "effect": "Three free scans across the run. Spend them where it matters.",
+      "recap": "Somebody was watching at 04:00, so three times you found out what was happening for nothing."
     },
     {
       "id": "auto-isolate",
@@ -62,7 +62,7 @@
       "product": "Cove Backup",
       "name": "Immutable off-site vault",
       "desc": "Restore points that cannot be edited or deleted by anyone, including you, until they expire.",
-      "effect": "Backups can be degraded but never lost.",
+      "effect": "Backups can never be lost \u2014 and while they stand, the business does not close.",
       "recap": "Your restore points could not be deleted by a credential, which is why you still had a business."
     },
     {
@@ -71,8 +71,8 @@
       "product": "Cove Backup",
       "name": "Tested restore runbook",
       "desc": "A documented restore, rehearsed quarterly, with a measured time to first system back.",
-      "effect": "A perfect stack brings back two systems instead of one.",
-      "recap": "You had restored before under no pressure, so restoring under pressure went twice as far."
+      "effect": "Every stage you contain brings a system back. A perfect stack brings back two.",
+      "recap": "You had restored before under no pressure, so you were recovering during the incident, not after it."
     }
   ]
 }

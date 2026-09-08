@@ -99,8 +99,22 @@ export function resolveStage({ variant, stageNumber, lead, backup, estate, depth
     if (d.delta !== 0 || d.held) changes.push({ ...d, kind: 'degrade' });
   }
 
-  if (outcome === 'perfect') {
-    const gained = restore(next, posture.has('restore-drill') ? 2 : 1);
+  /* Recovery.
+   *
+   * A perfect stack always brings a system back. The tested-runbook card
+   * extends that to any contained stage, and makes a perfect stack worth
+   * two.
+   *
+   * v13 gated the card on a perfect stack only, and a perfect stack with
+   * damage available to repair is rare enough that 3,000 measured runs put
+   * the card's value at +0.6 index — statistically nothing. A rehearsed
+   * restore is something you use during the incident, not only on the one
+   * stage you played flawlessly, so this is also the more truthful
+   * reading. */
+  const drilled = posture.has('restore-drill');
+  const restores = outcome === 'perfect' ? (drilled ? 2 : 1) : (drilled && outcome === 'contained' ? 1 : 0);
+  if (restores > 0) {
+    const gained = restore(next, restores);
     for (const g of gained) {
       next[g.system] = g.after;
       changes.push({ ...g, kind: 'restore' });

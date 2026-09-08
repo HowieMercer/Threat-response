@@ -283,17 +283,13 @@ export function createPillars({ onPick }) {
         card.disabled = !!lead && key === lead;
       }
     },
-    reveal({ weak, best }) {
-      if (weak) {
-        const { card, flag } = cards.get(weak);
-        card.classList.add('flagged-weak');
-        flag.textContent = 'WEAKEST LAYER HERE';
-      }
-      if (best) {
-        const { card, flag } = cards.get(best);
-        card.classList.add('flagged-best');
-        flag.textContent = 'STRONGEST LAYER HERE';
-      }
+    /* Only ever the weakest. Nothing in the game reveals the strongest —
+     * see the note on scan() in engine/game.js. */
+    reveal({ weak }) {
+      if (!weak) return;
+      const { card, flag } = cards.get(weak);
+      card.classList.add('flagged-weak');
+      flag.textContent = 'WEAKEST LAYER HERE';
     },
     lock() {
       for (const [, { card }] of cards) card.disabled = true;
