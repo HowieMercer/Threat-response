@@ -18,18 +18,23 @@ export const VERSION = 'v13';
  */
 export const STORE_KEY = 'nable_tr_v8';
 
-export const CONFIG = {
-  /* Where the scorecard QR points. Until the campaign landing page exists,
-   * this is the company homepage — the QR resolves to something real rather
-   * than a 404, and the run's result is carried in the query string so the
-   * page can pick it up when it does exist. */
-  landingUrl: 'https://www.n-able.com',
-
-  /* POST target for metrics and leads. Empty string = local only, which is
-   * the correct default: an event tablet on venue wifi should never block
-   * on a network call, and nothing leaves the device without consent. */
-  metricsEndpoint: '',
-
+/* Defaults for the per-event settings.
+ *
+ * The values that actually ship are in the plain inline script at the top
+ * of index.html, merged over these at runtime. That indirection is
+ * load-bearing rather than tidy-looking: read straight off a module const,
+ * the bundler constant-folds them. With `metricsEndpoint` at '' the whole
+ * POST path was eliminated from the output, and `kioskId`, `prize` and
+ * `emailFulfillment` did not appear in the built file at all — so the one
+ * thing CONFIG exists for, being editable per event, was the one thing you
+ * could not do to the delivered file. Correct minification, bad deployment
+ * model.
+ *
+ * Anything that must be settable on a tablet with a text editor and no
+ * toolchain belongs in the inline block. Anything that is a fact about the
+ * build belongs up here as a real const.
+ */
+const DEFAULTS = {
   /* Set per event. Appears on the attract screen and tags every lead. */
   eventName: 'the event',
 
@@ -40,21 +45,37 @@ export const CONFIG = {
   /* '' hides the prize line on the attract screen entirely. */
   prize: '',
 
+  /* Where the scorecard QR points. Until the campaign landing page exists
+   * this is the company homepage — the QR resolves to something real rather
+   * than a 404, and the run's result is carried in the query string so the
+   * page can pick it up when it does exist. */
+  landingUrl: 'https://www.n-able.com',
+
+  /* POST target for metrics and leads. Empty string = local only, which is
+   * the correct default: an event tablet on venue wifi should never block
+   * on a network call, and nothing leaves the device without consent. */
+  metricsEndpoint: '',
+
   /* The link in the GDPR consent line. Still pending legal confirmation —
    * it resolves, but the wording it sits next to is not signed off. */
   privacyUrl: 'https://www.n-able.com/legal/privacy-notice',
 
   /* Scorecard delivery. The game does not send email and has never had a
-   * mail path. Set this true only when CONFIG.metricsEndpoint actually
-   * fulfills one, because it is what switches the confirmation copy from
-   * "saved on this device" to "on its way to your inbox". Promising a mail
-   * that no code sends is the one bug a prospect experiences personally. */
+   * mail path. Set this true only when metricsEndpoint actually fulfills
+   * one, because it is what switches the confirmation copy from "saved on
+   * this device" to "on its way to your inbox". Promising a mail that no
+   * code sends is the one bug a prospect experiences personally. */
   emailFulfillment: false,
 };
 
-/* Stage pacing. The intrusion track crosses the board in this many seconds
- * at each stage, which is where escalation actually lives — the numbers get
- * smaller, the attacker moves faster, nothing on screen has to shout. */
-export const STAGE_SECONDS = [20, 18, 16, 14, 13];
+/* globalThis rather than window, so this module can be imported in Node —
+ * neither the balance harness nor the integrity tests run in a browser. */
+const overrides = (typeof globalThis !== 'undefined' && globalThis.TR_CONFIG) || {};
 
-export const THREAT_LEVELS = ['Elevated', 'Elevated', 'High', 'Severe', 'Critical'];
+/* Known keys only, so a typo in the inline block complains at the point of
+ * the typo rather than silently doing nothing three screens later. */
+export const CONFIG = { ...DEFAULTS };
+for (const [key, value] of Object.entries(overrides)) {
+  if (key in DEFAULTS) CONFIG[key] = value;
+  else console.warn(`TR_CONFIG: unknown setting "${key}" ignored`);
+}

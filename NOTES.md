@@ -6,14 +6,18 @@ than recorded here.
 
 ## Not code problems — someone has to decide
 
-- **`CONFIG.landingUrl`** points at `https://www.n-able.com`. The campaign
+All of these live in the `window.TR_CONFIG` block at the top of
+`index.html`, which is also the top of the built file. Change them there;
+no rebuild needed.
+
+- **`landingUrl`** points at `https://www.n-able.com`. The campaign
   scorecard landing page does not exist yet. The QR resolves to something
   real and carries the run's result in the query string (`?tr=…&s=…&i=…&d=…
   &z=…&r=…&c=…&g=…`), so the page can read it the day it exists. Until then
   the loop does not close.
-- **`CONFIG.privacyUrl`** resolves, but the GDPR consent wording it sits
-  beside has not had legal sign-off.
-- **`CONFIG.eventName`, `kioskId`, `prize`** are per-event and unset.
+- **`privacyUrl`** resolves, but the GDPR consent wording it sits beside
+  has not had legal sign-off.
+- **`eventName`, `kioskId`, `prize`** are per-event and unset.
 - **Official N-able brand hex codes** are still a pre-launch confirmation
   item. The palette in `CLAUDE.md` is the v12 palette, carried over.
 
@@ -29,12 +33,18 @@ than recorded here.
   is not `file:`, `data:` or `blob:`, so this cannot quietly regress.
 - **The scorecard email promise is gone.** Nothing in the codebase has ever
   sent mail. The confirmation now says the scorecard is saved on the device
-  and that booth staff will export it. `CONFIG.emailFulfillment` switches
+  and that booth staff will export it. `emailFulfillment` switches
   the copy back to "on its way" and should be set only when an endpoint
   actually sends something.
 - **One `VERSION` constant**, emitted in leads, completions, abandons, the
   CSV and the QR payload. v11/v12 shipped `v11` on leads and `v8` on
   completions from two different code paths.
+- **The per-event settings survive the build.** They were being read off a
+  module const, which the bundler constant-folded: `metricsEndpoint` at
+  `''` removed the whole POST path, and `kioskId`, `prize` and
+  `emailFulfillment` were not in the built file at all. They now come from
+  an inline block at the top of the file, read at runtime — which is also
+  the only way a per-kiosk value can be set on the delivered artifact.
 - **`STORE_KEY` stays `nable_tr_v8`**, with a comment in `config.js` saying
   why. It does not track `VERSION`.
 

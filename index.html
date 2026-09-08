@@ -3,6 +3,53 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- =======================================================================
+     PER-EVENT SETTINGS — safe to edit in the built file, no rebuild needed.
+
+     This block is deliberately a plain inline script rather than part of the
+     bundle. Anything read from the bundle's own const gets constant-folded at
+     build time: with metricsEndpoint set to "" the whole POST path was
+     eliminated, and kioskId and emailFulfillment did not survive into the
+     output at all. That is correct minification and a bad deployment model,
+     because these are exactly the values someone sets on a tablet at a stand
+     with a text editor and no toolchain.
+
+     Read at runtime and merged over the defaults in src/config.js. Delete a
+     line to fall back to its default. Do not rename the keys.
+     ======================================================================= -->
+<script>
+  window.TR_CONFIG = {
+    // Shown on the attract screen and tagged onto every lead.
+    eventName: 'the event',
+
+    // e.g. 'stand-A-left'. Tags leads and scans so two tablets at the same
+    // stand can be told apart afterwards.
+    kioskId: '',
+
+    // '' hides the prize line entirely.
+    prize: '',
+
+    // Where the scorecard QR points. The run's result is appended as a query
+    // string, so a landing page can read it. TODO: the campaign scorecard
+    // page this is meant to reach does not exist yet.
+    landingUrl: 'https://www.n-able.com',
+
+    // POST target for plays, completions, abandons and leads. '' means local
+    // only, which is the right default on venue wifi — an event tablet must
+    // never block between stages waiting on a network call.
+    metricsEndpoint: '',
+
+    // The link in the GDPR consent line. TODO: the wording beside it has not
+    // had legal sign-off.
+    privacyUrl: 'https://www.n-able.com/legal/privacy-notice',
+
+    // Set true ONLY when metricsEndpoint actually sends a scorecard email.
+    // It is what switches the confirmation copy from "saved on this device"
+    // to "on its way to your inbox", and promising a mail that no code sends
+    // is the one bug a prospect experiences personally.
+    emailFulfillment: false,
+  };
+</script>
 <title>N-able Threat Response</title>
 <meta name="description" content="A two-minute ransomware decision simulator. Lead with a defense layer, back it up, and see what it costs you.">
 <!-- No font <link> tags. Fonts are self-hosted via @font-face in

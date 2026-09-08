@@ -5,7 +5,8 @@
 
 import { h } from '../ui/dom.js';
 import { Store } from '../store.js';
-import { CONFIG, VERSION, STAGE_SECONDS } from '../config.js';
+import { CONFIG, VERSION } from '../config.js';
+import { DATA } from '../data/index.js';
 import { SCAN_COST, HOLD_COST } from '../engine/game.js';
 import { RANKS, DEFENSE_CAP } from '../engine/scoring.js';
 
@@ -90,7 +91,9 @@ export function openHelp(app) {
 
       h('h3', null, 'The clock'),
       h('p', null,
-        `The intrusion track crosses the board in ${STAGE_SECONDS.join(', ')} seconds across the five stages. Ground the attacker already holds shortens the next stage, so a bad stage makes the following one harder — it never makes it unplayable.`),
+        /* Read off the scenario data rather than a second copy of the
+         * numbers, so tuning a stage cannot leave the rules panel lying. */
+        `The intrusion track crosses the board in ${DATA.scenarios.stages.map((s) => s.seconds).join(', ')} seconds across the five stages. Ground the attacker already holds shortens the next stage, so a bad stage makes the following one harder — it never makes it unplayable.`),
       h('p', null, 'Learn mode removes the clock entirely. The decisions and the answer key are identical.'),
 
       h('h3', null, 'The rank ladder'),

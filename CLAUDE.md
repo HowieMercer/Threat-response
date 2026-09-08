@@ -44,7 +44,7 @@ key changed shape.
 ```
 src/
   main.js               entry — wires engine to screens, owns no rules
-  config.js             VERSION, CONFIG, storage key, stage pacing
+  config.js             VERSION, storage key, per-event defaults
   data/*.json           all content, no logic
   engine/               state machine, resolution, scoring — no DOM
   render/               canvas field, screen effects, synthesized audio

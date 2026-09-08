@@ -53,7 +53,7 @@ after every change to `src/data/scenarios.json`.
 | `src/engine/` | State machine, stage resolution, scoring. No DOM — a whole run plays in Node. |
 | `src/screens/` | One module per screen. |
 | `src/ui/qr.js` | QR encoder, in-file, because a CDN script would break the offline constraint. |
-| `src/config.js` | `VERSION`, per-event `CONFIG`, stage pacing. |
+| `src/config.js` | `VERSION`, the storage key, per-event defaults. |
 | `CLAUDE.md` | The constraints, the scenario schema, and why things are the way they are. Read this before changing anything. |
 | `NOTES.md` | Open items that need a decision rather than a patch. |
 
@@ -73,20 +73,26 @@ Adding a scenario means editing one JSON file. The schema is documented in
 
 ## Per-event configuration
 
-Everything deployment-specific is at the top of `src/config.js`:
-`eventName`, `kioskId` (tags leads so two tablets at one stand can be told
-apart), `prize`, `landingUrl` (where the scorecard QR points),
-`metricsEndpoint` (empty means local only, which is the right default for a
-venue wifi) and `privacyUrl`.
+Everything deployment-specific is in one plainly commented block in the
+**first kilobyte of `dist/index.html`**, so it can be changed on a tablet at
+a stand with a text editor and no rebuild: `eventName`, `kioskId` (tags
+leads so two tablets at one stand can be told apart), `prize`, `landingUrl`
+(where the scorecard QR points), `metricsEndpoint` (empty means local only,
+the right default on venue wifi), `privacyUrl` and `emailFulfillment`.
+
+The same block is in `index.html` in the source, and `src/config.js` holds
+the defaults it is merged over. It has to work this way round: read off a
+module const, the bundler folds the falsy values away and the keys do not
+exist in the built file at all.
 
 Leads and the leaderboard live in `localStorage` per device, and the stats
 panel says so on screen. Export to CSV from there.
 
 ## Two things that are not true unless you make them true
 
-- `CONFIG.emailFulfillment` is `false` and the confirmation copy says the
+- `emailFulfillment` is `false` and the confirmation copy says the
   scorecard is saved on the device. Nothing in this codebase sends email. Set
   it `true` only when `metricsEndpoint` actually fulfills one.
-- `CONFIG.landingUrl` is the company homepage. The campaign scorecard page
+- `landingUrl` is the company homepage. The campaign scorecard page
   the QR is meant to reach does not exist yet; the run's result is already
   carried in the query string for when it does.
