@@ -147,6 +147,32 @@ describe('the copy carries no answer', () => {
     expect(spread, `punctuation per rank: ${per.map((x) => x.toFixed(2)).join(' / ')}`).toBeLessThan(0.35);
   });
 
+  it('does not let the longest or shortest action favour any rank', () => {
+    /* The stronger form of the test above, and the one that caught a
+     * +10-point edge the "longest is best" count did not: what matters is
+     * not how often the longest action is CORRECT, it is how often it is
+     * SAFE. "Pick the longest" was avoiding the weak layer 25% of the
+     * time against 33% by chance, and avoiding the answer that breaches
+     * is worth more than finding the answer that is best. Both extremes
+     * have to be flat, not just the top one. */
+    const tally = (worse) => {
+      const c = { best: 0, partial: 0, weak: 0 };
+      for (const v of allVariants) {
+        /* Same tie-break as scripts/monte-carlo.mjs: first pillar wins. */
+        const pick = PILLARS.reduce((a, b) => (worse(v.act[b].length, v.act[a].length) ? b : a));
+        c[v.rank[pick]]++;
+      }
+      return c;
+    };
+    for (const [label, c] of [
+      ['longest', tally((b, a) => b > a)],
+      ['shortest', tally((b, a) => b < a)],
+    ]) {
+      const spread = Math.max(...Object.values(c)) - Math.min(...Object.values(c));
+      expect(spread, `${label} action by rank: ${JSON.stringify(c)}`).toBeLessThanOrEqual(4);
+    }
+  });
+
   it('keeps every action short enough to read under time pressure', () => {
     for (const v of allVariants) {
       for (const p of PILLARS) {

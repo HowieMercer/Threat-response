@@ -233,7 +233,7 @@ describe('rules that carry the sales argument', () => {
 
     const beforeScan = g.state.depth;
     expect(g.scan()).toBe(true);
-    expect(g.state.revealed.weak).toBe(true);
+    expect(g.state.revealed.partial).toBe(true);
     expect(g.state.capacity).toBe(cap - HOLD_COST - SCAN_COST);
     /* A scan costs ground as well as capacity, or there is no reason not
      * to scan every stage. */
@@ -307,6 +307,67 @@ describe('rules that carry the sales argument', () => {
     expect(g.state.rounds[1].outcome).toBe('breached');
   });
 
+  it('halves the blast radius of a breach under an enforced patch window', () => {
+    const run = (posture) => {
+      const g = createGame({ data: DATA, seed: 21, mode: 'learn' });
+      for (const id of posture) g.togglePosture(id);
+      g.begin();
+      const weak = PILLARS.find((p) => g.state.variant.rank[p] === 'weak');
+      g.choose(weak);
+      g.choose(PILLARS.find((p) => p !== weak));
+      const r = g.state.rounds[0];
+      return r.estate[r.target];
+    };
+    /* Endpoints start at 2. A breach takes two points, or one if the
+     * estate was patched on a schedule. */
+    expect(run([])).toBe(0);
+    expect(run(['patch-cadence'])).toBe(1);
+  });
+
+  it('costs the estate nothing on a mitigated stage under a complete inventory', () => {
+    const run = (posture) => {
+      const g = createGame({ data: DATA, seed: 21, mode: 'learn' });
+      for (const id of posture) g.togglePosture(id);
+      g.begin();
+      const v = g.state.variant;
+      const partial = PILLARS.find((p) => v.rank[p] === 'partial');
+      g.choose(partial);
+      g.choose(PILLARS.find((p) => p !== partial));
+      const r = g.state.rounds[0];
+      expect(r.outcome).toMatch(/^mitigated/);
+      return { health: r.estate[r.target], changes: r.changes.length };
+    };
+    expect(run([]).health).toBe(1);
+    const held = run(['asset-inventory']);
+    expect(held.health).toBe(2);
+    /* And nothing is animated as damage, because nothing was damaged. */
+    expect(held.changes).toBe(0);
+  });
+
+  it('brings a system all the way back on any stage that was not a breach, once drilled', () => {
+    const g = createGame({ data: DATA, seed: 21, mode: 'learn' });
+    g.togglePosture('restore-drill');
+    g.begin();
+    /* Stage one: breach, to put damage on the board to repair. */
+    const weak = PILLARS.find((p) => g.state.variant.rank[p] === 'weak');
+    g.choose(weak);
+    g.choose(PILLARS.find((p) => p !== weak));
+    const hit = g.state.rounds[0].target;
+    expect(g.state.estate[hit]).toBe(0);
+    g.nextStage();
+    /* Stage two: only mitigated, which without the runbook restores
+     * nothing at all. */
+    const partial = PILLARS.find((p) => g.state.variant.rank[p] === 'partial');
+    g.choose(partial);
+    g.choose(PILLARS.find((p) => p !== partial));
+    const r = g.state.rounds[1];
+    const restored = r.changes.filter((c) => c.kind === 'restore');
+    expect(restored.length).toBe(1);
+    /* All the way back, not part way — that is the whole difference
+     * between having backups and having rehearsed using them. */
+    expect(restored[0].after).toBe(2);
+  });
+
   it('keeps the vault alive at stage five when it is immutable', () => {
     const g = createGame({ data: DATA, seed: 31, mode: 'learn' });
     g.togglePosture('immutable-vault');
@@ -329,5 +390,92 @@ describe('rules that carry the sales argument', () => {
     });
     expect(s.gap.detail).toMatch(/T\d{4}/);
     expect(s.gap.pillar).toBeTruthy();
+  });
+});
+
+/* The reflex channel and the decision channel have to stay separate. v13
+ * scheduled injects on intrusion depth, which put them on top of the lead
+ * decision on every stage — see maybeFireInject() for why depth cannot
+ * express "just after the threat card has been read". These lock the
+ * contract the fix depends on. */
+describe('live injects', () => {
+  const injected = () =>
+    DATA.scenarios.stages.flatMap((s) =>
+      s.variants.filter((v) => v.inject).map((v) => ({ ...v, stage: s.id, seconds: s.seconds }))
+    );
+
+  it('schedules every inject before a timed player would commit a lead', () => {
+    /* The player model in scripts/monte-carlo.mjs reads for 3.4s +/- 1.3s
+     * before picking. Anything at or after 3s is landing inside that. */
+    const all = injected();
+    expect(all.length).toBeGreaterThan(0);
+    for (const v of all) {
+      expect(v.inject.after, `${v.tech} after`).toBeGreaterThan(0);
+      expect(v.inject.after, `${v.tech} after`).toBeLessThan(3);
+      expect(v.inject.at, `${v.tech} still uses depth`).toBeUndefined();
+    }
+  });
+
+  it('leaves the whole answer window inside the stage clock', () => {
+    for (const v of injected()) {
+      expect(v.inject.after + v.inject.seconds, `${v.tech} on the ${v.stage} clock`)
+        .toBeLessThan(v.seconds);
+    }
+  });
+
+  it('fires one on the stage clock, in learn mode as well as timed', () => {
+    for (const mode of ['timed', 'learn']) {
+      /* Seed 3 draws T1190 at stage one, which carries an inject. */
+      const g = createGame({ data: DATA, seed: 3, mode });
+      g.begin();
+      expect(g.state.variant.inject, `seed 3 stage 1 in ${mode}`).toBeTruthy();
+      for (let i = 0; i < 40 && !g.state.inject; i++) g.tick(100);
+      expect(g.state.inject, `no inject fired in ${mode}`).toBeTruthy();
+      expect(g.state.stageElapsed).toBeGreaterThanOrEqual(g.state.variant.inject.after * 1000);
+    }
+  });
+
+  it('never fires into a half-built stack', () => {
+    const g = createGame({ data: DATA, seed: 3, mode: 'timed' });
+    g.begin();
+    const v = g.state.variant;
+    expect(v.inject).toBeTruthy();
+    /* Commit a lead immediately and then run past the inject's moment. A
+     * lead with no backup yet is the one state the guard protects. */
+    g.choose(PILLARS.find((p) => v.rank[p] === 'best'));
+    for (let i = 0; i < 40 && g.state.phase === PHASE.STAGE; i++) {
+      g.tick(100);
+      expect(g.state.inject, 'inject fired mid-stack').toBeFalsy();
+    }
+  });
+
+  it('does not open a window the stage clock will cut off', () => {
+    /* Hand-built variant whose window cannot complete: the answer window
+     * is longer than the stage. It must never fire rather than fire and
+     * expire, which reads as the game cheating. */
+    const g = createGame({ data: DATA, seed: 3, mode: 'timed' });
+    g.begin();
+    g.state.variant = {
+      ...g.state.variant,
+      inject: { ...g.state.variant.inject, after: 0.5, seconds: 999 },
+    };
+    g.state.stageElapsed = 0;
+    for (let i = 0; i < 40 && g.state.phase === PHASE.STAGE; i++) {
+      g.tick(100);
+      expect(g.state.inject, 'opened a window the clock cannot honour').toBeFalsy();
+    }
+  });
+
+  it('costs ground when missed and buys it back when caught', () => {
+    const run = (hit) => {
+      const g = createGame({ data: DATA, seed: 3, mode: 'timed' });
+      g.begin();
+      for (let i = 0; i < 40 && !g.state.inject; i++) g.tick(100);
+      const before = g.state.depth;
+      g.resolveInject(hit);
+      return g.state.depth - before;
+    };
+    expect(run(true)).toBeLessThan(0);
+    expect(run(false)).toBeGreaterThan(0);
   });
 });

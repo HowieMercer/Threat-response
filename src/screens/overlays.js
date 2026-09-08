@@ -85,9 +85,9 @@ export function openHelp(app) {
       row('Both picks right', 'Perfect stack. A system you already lost comes back.'),
 
       h('h3', null, 'During a stage'),
-      row(`Scan — ${SCAN_COST} capacity`, 'Reveals the weakest layer for this technique. Never the strongest, unless you bought a complete asset inventory. Costs ground as well as capacity.'),
+      row(`Scan — ${SCAN_COST} capacity`, 'Names the layer that is only a partial fit for this technique. Never the strongest and never the weakest — it narrows the problem, it does not answer it. Costs ground as well as capacity.'),
       row(`Isolate — ${HOLD_COST} capacity`, 'Pushes the attacker back down the track and buys you seconds.'),
-      row('Live injects', 'One tap, a few seconds. Missing one costs ground, never the run.'),
+      row('Live injects', 'One tap or X, a few seconds. Missing one costs ground, never the run.'),
 
       h('h3', null, 'The clock'),
       h('p', null,
@@ -105,7 +105,7 @@ export function openHelp(app) {
 
       h('h3', null, 'Keyboard'),
       h('div', { class: 'keys' },
-        ...[['1 2 3', 'Pick a layer'], ['S', 'Scan'], ['H', 'Isolate'], ['Space', 'Answer an inject'],
+        ...[['1 2 3', 'Pick a layer'], ['S', 'Scan'], ['H', 'Isolate'], ['X', 'Answer a live inject'],
             ['Enter', 'Primary action'], ['R', 'Play again'], ['M', 'Sound'], ['?', 'This panel']]
           .map(([k, v]) => h('div', { class: 'kv' }, h('span', { class: 'kv-k' }, h('span', { class: 'kbd' }, k)), h('span', { class: 'kv-v' }, v)))
       ),

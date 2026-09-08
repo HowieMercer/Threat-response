@@ -26,8 +26,8 @@
       "product": "N-central",
       "name": "Enforced patch window",
       "desc": "Every endpoint and server patched on a schedule nobody can defer, with exceptions that expire.",
-      "effect": "BlackVault starts every stage 12 points further back.",
-      "recap": "You closed known entry points on a schedule, so the attack started from further out."
+      "effect": "BlackVault starts every stage further back, and a breach costs one point of damage instead of two.",
+      "recap": "You closed known entry points on a schedule, so the attack started from further out and every mistake cost you less."
     },
     {
       "id": "asset-inventory",
@@ -35,8 +35,8 @@
       "product": "N-central",
       "name": "Complete asset inventory",
       "desc": "Every device, account and service accounted for, reconciled against what is approved.",
-      "effect": "The first isolate of every stage is free. It costs no capacity.",
-      "recap": "You knew exactly what you owned, so cutting a segment off never cost you an analyst."
+      "effect": "A stage you only slow down costs the estate nothing at all.",
+      "recap": "You knew exactly what every box was and what depended on it, so the near-misses cost you nothing."
     },
     {
       "id": "soc-watch",
@@ -44,8 +44,8 @@
       "product": "Adlumin MDR",
       "name": "24/7 monitored response",
       "desc": "Analysts watching the estate on the hours nobody on the payroll is awake for.",
-      "effect": "Three free scans across the run. Spend them where it matters.",
-      "recap": "Somebody was watching at 04:00, so three times you found out what was happening for nothing."
+      "effect": "Three free scans, and BlackVault moves slower until you commit.",
+      "recap": "Somebody was already engaging at 04:00, so you were never the first to know and never the only one working."
     },
     {
       "id": "auto-isolate",
@@ -71,8 +71,8 @@
       "product": "Cove Backup",
       "name": "Tested restore runbook",
       "desc": "A documented restore, rehearsed quarterly, with a measured time to first system back.",
-      "effect": "Every stage you contain brings a system back. A perfect stack brings back two.",
-      "recap": "You had restored before under no pressure, so you were recovering during the incident, not after it."
+      "effect": "Any stage BlackVault does not get through brings a system all the way back. A perfect stack brings two.",
+      "recap": "You had restored before under no pressure, so systems came back to service during the incident rather than part-way back after it."
     }
   ]
 }

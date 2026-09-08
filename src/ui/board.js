@@ -283,13 +283,19 @@ export function createPillars({ onPick }) {
         card.disabled = !!lead && key === lead;
       }
     },
-    /* Only ever the weakest. Nothing in the game reveals the strongest —
-     * see the note on scan() in engine/game.js. */
-    reveal({ weak }) {
-      if (!weak) return;
-      const { card, flag } = cards.get(weak);
-      card.classList.add('flagged-weak');
-      flag.textContent = 'WEAKEST LAYER HERE';
+    /* Only ever the partial fit. Nothing in the game reveals the strongest
+     * layer or the weakest one — see the long note on scan() in
+     * engine/game.js for the measurement that decided that.
+     *
+     * The flagged card is not dimmed. A partial fit is a defensible pick
+     * that happens not to be the strongest, and dimming it would tell the
+     * player to rule it out, which is both wrong and more information than
+     * the scan actually bought. */
+    reveal({ partial }) {
+      if (!partial) return;
+      const { card, flag } = cards.get(partial);
+      card.classList.add('flagged-partial');
+      flag.textContent = 'PARTIAL FIT HERE';
     },
     lock() {
       for (const [, { card }] of cards) card.disabled = true;

@@ -104,11 +104,24 @@ const random = (s, slot, lead) => {
   const o = slot === 'lead' ? PILLARS : PILLARS.filter((p) => p !== lead);
   return o[rnd(o.length)];
 };
-const avoidWeak = (s, slot, lead) => {
-  if (!s.revealed.weak) return random(s, slot, lead);
-  const weak = PILLARS.find((p) => s.variant.rank[p] === 'weak');
-  const o = (slot === 'lead' ? PILLARS : PILLARS.filter((p) => p !== lead)).filter((p) => p !== weak);
+/* What a knowledge-free player does with a scan: the game has just told
+ * them one layer is a partial fit, so they rule it out and flip between the
+ * other two. It should gain them nothing — see the note on scan() in
+ * engine/game.js — and `scan then guess` below is the check that it does
+ * not. The paired strategy takes the partial instead, which is the other
+ * thing a knowledge-free player might reasonably do with the same reveal,
+ * and it has to come out at the same number. */
+const avoidPartial = (s, slot, lead) => {
+  if (!s.revealed.partial) return random(s, slot, lead);
+  const partial = PILLARS.find((p) => s.variant.rank[p] === 'partial');
+  const o = (slot === 'lead' ? PILLARS : PILLARS.filter((p) => p !== lead)).filter((p) => p !== partial);
   return (o.length ? o : PILLARS.filter((p) => p !== lead))[rnd(o.length || 2)];
+};
+const takePartial = (s, slot, lead) => {
+  if (!s.revealed.partial) return random(s, slot, lead);
+  const partial = PILLARS.find((p) => s.variant.rank[p] === 'partial');
+  if (slot === 'lead') return partial;
+  return partial === lead ? random(s, slot, lead) : partial;
 };
 /* The typographic exploits. These read the copy, not the ranks — which is
  * exactly what a player at a stand can do in the two seconds they have. */
@@ -116,12 +129,32 @@ const longestAct = (s, slot, lead) => {
   const o = slot === 'lead' ? PILLARS : PILLARS.filter((p) => p !== lead);
   return o.reduce((a, b) => (s.variant.act[b].length > s.variant.act[a].length ? b : a));
 };
+const shortestAct = (s, slot, lead) => {
+  const o = slot === 'lead' ? PILLARS : PILLARS.filter((p) => p !== lead);
+  return o.reduce((a, b) => (s.variant.act[b].length < s.variant.act[a].length ? b : a));
+};
 const mostCommas = (s, slot, lead) => {
   const o = slot === 'lead' ? PILLARS : PILLARS.filter((p) => p !== lead);
   const c = (p) => (s.variant.act[p].match(/,/g) || []).length;
   const max = Math.max(...o.map(c));
   const top = o.filter((p) => c(p) === max);
   return top[rnd(top.length)];
+};
+/* One competence level above knowing nothing, and the only invented
+ * parameter in this file is which level: this player cannot rank three
+ * layers, but shown that one of them is only a partial fit they can tell
+ * the strongest of the remaining two from the weakest. That is a real
+ * competence — it is roughly "has worked an incident, has not memorised
+ * ATT&CK" — and it is the player the information cards are sold to.
+ *
+ * It exists because a knowledge-free model structurally cannot measure a
+ * knowledge-gated mechanic, and reporting such a mechanic as dead is the
+ * same measurement mistake this file has already made three times. */
+const semiInformed = (s, slot, lead) => {
+  if (!s.revealed.partial) return random(s, slot, lead);
+  const best = PILLARS.find((p) => s.variant.rank[p] === 'best');
+  if (slot === 'lead') return best;
+  return rightBackupFor(s.variant, lead);
 };
 const expert = (s, slot) => {
   const best = PILLARS.find((p) => s.variant.rank[p] === 'best');
@@ -142,13 +175,16 @@ const STRATEGIES = [
     },
   },
   { name: 'longest act string', fn: longestAct, exploit: true },
+  { name: 'shortest act string', fn: shortestAct, exploit: true },
   { name: 'most commas in act', fn: mostCommas, exploit: true },
   /* Closer to a real first-time player than uniform random: reads the
    * card, has no security knowledge, uses the free look the game offers.
    * Reported because the 35-45% invariant sits between this number and the
    * uniform-random one, so which player "blind" means decides the verdict. */
-  { name: 'naive reader', fn: avoidWeak, wantsScan: true, wantsHold: true },
-  { name: 'scan then guess', fn: avoidWeak, wantsScan: true },
+  { name: 'naive reader', fn: avoidPartial, wantsScan: true, wantsHold: true },
+  { name: 'scan then guess', fn: avoidPartial, wantsScan: true },
+  { name: 'scan then take it', fn: takePartial, wantsScan: true },
+  { name: 'semi-informed + scan', fn: semiInformed, wantsScan: true, wantsHold: true },
   { name: 'expert — perfect stack', fn: expert },
 ];
 
@@ -169,7 +205,7 @@ function measure(strat, n) {
    * The index is computed from stage outcomes alone, so a readiness card
    * that brings systems back cannot move it — measuring such a card by
    * index reports it as dead when it is not. */
-  let defense = 0, systemsLost = 0;
+  let defense = 0, systemsLost = 0, health = 0;
 
   for (let i = 0; i < n; i++) {
     const s = play(strat.fn, strat);
@@ -182,6 +218,12 @@ function measure(strat, n) {
     defense += s.defense;
     if (strat.blind) blindDefense.push(s.defense);
     systemsLost += Object.values(s.estate).filter((v) => v <= 0).length;
+    /* Total estate health out of 12, not just the count of systems at
+     * zero. A card that stops a system being degraded is on screen for the
+     * whole run and invisible to `lost`, which only counts total losses —
+     * and measuring a mechanic on an axis it does not act on is how this
+     * file has misreported a card four times now. */
+    health += Object.values(s.estate).reduce((a, b) => a + b, 0);
     rankCount[s.rank.name] = (rankCount[s.rank.name] || 0) + 1;
     for (const r of s.rounds) {
       stages++;
@@ -205,6 +247,7 @@ function measure(strat, n) {
     closed: (closed / n) * 100,
     defense: defense / n,
     systemsLost: systemsLost / n,
+    health: health / n,
     unanswered: (unanswered / stages) * 100,
     leadRank,
     byPillar,
@@ -222,18 +265,33 @@ const blind = byName['blind — uniform random'];
 /* Readiness cards: marginal value against an attentive non-expert, which
  * is the player who actually buys one. */
 const CARD_RUNS = Math.max(200, Math.floor(per / 3));
-const CARD_PLAYER = { fn: avoidWeak, wantsScan: true, wantsHold: true };
+/* Uniform random rather than a strategy that reads the reveal, because
+ * the reveal is deliberately worth nothing without knowledge. This player
+ * uses every mechanic — scans, isolates, answers injects — and knows no
+ * security, which is the player who actually buys a readiness card. */
+const CARD_PLAYER = { fn: random, wantsScan: true, wantsHold: true };
+/* And the same board measured by the player one level up, because three of
+ * the six cards act on information or on time and both are worth nothing
+ * to someone who cannot use them. A card is a live choice if it is live
+ * for either player; a card that is dead for both is decoration. */
+const CARD_PLAYER_2 = { fn: semiInformed, wantsScan: true, wantsHold: true };
+const deltas = (m, base) => ({
+  dIndex: m.index - base.index,
+  dHunter: m.hunter - base.hunter,
+  dClosed: m.closed - base.closed,
+  dDefense: m.defense - base.defense,
+  dLost: m.systemsLost - base.systemsLost,
+  dHealth: m.health - base.health,
+});
+const live = (d) => d.dIndex >= 3 || Math.abs(d.dClosed) >= 8 || d.dDefense >= 0.4 || d.dLost <= -0.35 || d.dHealth >= 0.8;
 const cardBase = measure({ name: 'no cards', ...CARD_PLAYER }, CARD_RUNS);
+const cardBase2 = measure({ name: 'no cards', ...CARD_PLAYER_2 }, CARD_RUNS);
 const cards = DATA.postures.cards.map((c) => {
   const m = measure({ name: c.id, ...CARD_PLAYER, posture: [c.id] }, CARD_RUNS);
-  return {
-    id: c.id, pillar: c.pillar, ...m,
-    dIndex: m.index - cardBase.index,
-    dHunter: m.hunter - cardBase.hunter,
-    dClosed: m.closed - cardBase.closed,
-    dDefense: m.defense - cardBase.defense,
-    dLost: m.systemsLost - cardBase.systemsLost,
-  };
+  const m2 = measure({ name: c.id, ...CARD_PLAYER_2, posture: [c.id] }, CARD_RUNS);
+  const d = deltas(m, cardBase);
+  const d2 = deltas(m2, cardBase2);
+  return { id: c.id, pillar: c.pillar, ...m, ...d, informed: d2, liveBlind: live(d), live: live(d) || live(d2) };
 });
 /* Every legal pair, so a solved combination cannot hide. */
 const PAIRS = [];
@@ -301,7 +359,7 @@ for (const rank of RANKS) {
  * where the Threat Hunter line sits decides the number entirely. This table
  * is the lever: it says what each threshold would produce, so the decision
  * is one edit to RANKS in scoring.js and not a rebalance of the pool. */
-console.log('\nwhere the Threat Hunter line lands blind play (currently 7)');
+console.log(`\nwhere the Threat Hunter line lands blind play (currently ${RANKS.find((r) => r.name === 'Threat Hunter').min})`);
 console.log('-'.repeat(84));
 console.log('  defense pts  ' + [4, 5, 6, 7, 8].map((t) => 't>=' + t).join('      '));
 console.log('  blind at+    ' + [4, 5, 6, 7, 8].map((t) => {
@@ -309,10 +367,10 @@ console.log('  blind at+    ' + [4, 5, 6, 7, 8].map((t) => {
   return num(share * 100, 5) + '%';
 }).join('    '));
 
-console.log(`\nreadiness cards — marginal value, ${CARD_RUNS.toLocaleString()} runs each, attentive non-expert`);
+console.log(`\nreadiness cards — marginal value, ${CARD_RUNS.toLocaleString()} runs each, knows no security`);
 console.log('-'.repeat(84));
 console.log('  ' + pad('baseline, no cards', 25) +
-  `index ${num(cardBase.index, 5)}  defense ${num(cardBase.defense, 4, 2)}  lost ${num(cardBase.systemsLost, 4, 2)}  closed ${num(cardBase.closed, 5)}%`);
+  `index ${num(cardBase.index, 5)}  defense ${num(cardBase.defense, 4, 2)}  lost ${num(cardBase.systemsLost, 4, 2)}  estate ${num(cardBase.health, 5, 2)}/12  closed ${num(cardBase.closed, 5)}%`);
 const sign = (v, d = 1) => (v >= 0 ? '+' : '') + v.toFixed(d);
 for (const c of [...cards].sort((a, b) => b.dIndex - a.dIndex)) {
   console.log(
@@ -320,7 +378,26 @@ for (const c of [...cards].sort((a, b) => b.dIndex - a.dIndex)) {
     `index ${num(c.index, 5)} (${pad(sign(c.dIndex), 6)})  ` +
     `defense ${num(c.defense, 4, 2)} (${pad(sign(c.dDefense, 2), 6)})  ` +
     `lost ${num(c.systemsLost, 4, 2)} (${pad(sign(c.dLost, 2), 6)})  ` +
+    `estate ${pad(sign(c.dHealth, 2), 6)}  ` +
     `closed ${num(c.closed, 5)}% (${sign(c.dClosed)})`
+  );
+}
+
+/* The same board for the player one competence level up. A card that only
+ * appears here is knowledge-gated, which is a fact about the card and not
+ * a fault in it — but it has to be visible, because it decides who the
+ * card is worth recommending to. */
+console.log(`\nreadiness cards — the same board, semi-informed player`);
+console.log('-'.repeat(84));
+console.log('  ' + pad('baseline, no cards', 25) +
+  `index ${num(cardBase2.index, 5)}  defense ${num(cardBase2.defense, 4, 2)}  lost ${num(cardBase2.systemsLost, 4, 2)}  estate ${num(cardBase2.health, 5, 2)}/12  closed ${num(cardBase2.closed, 5)}%`);
+for (const c of [...cards].sort((a, b) => b.informed.dIndex - a.informed.dIndex)) {
+  const d = c.informed;
+  console.log(
+    '  ' + pad(c.id, 17) + pad(c.pillar, 8) +
+    `index ${pad(sign(d.dIndex), 7)}  defense ${pad(sign(d.dDefense, 2), 7)}  ` +
+    `lost ${pad(sign(d.dLost, 2), 7)}  estate ${pad(sign(d.dHealth, 2), 7)}  closed ${pad(sign(d.dClosed), 7)}  ` +
+    (live(d) && !c.liveBlind ? 'knowledge-gated' : '')
   );
 }
 
@@ -348,11 +425,21 @@ const checks = [
   ['LONGEST-ACT heuristic beats blind by under 10 points',
    byName['longest act string'].hunter - blind.hunter < 10,
    `+${(byName['longest act string'].hunter - blind.hunter).toFixed(1)}`],
+  ['SHORTEST-ACT heuristic beats blind by under 10 points',
+   byName['shortest act string'].hunter - blind.hunter < 10,
+   `+${(byName['shortest act string'].hunter - blind.hunter).toFixed(1)}`],
   ['MOST-COMMAS heuristic beats blind by under 10 points',
    byName['most commas in act'].hunter - blind.hunter < 10,
    `+${(byName['most commas in act'].hunter - blind.hunter).toFixed(1)}`],
-  ['scan-and-guess is not a winning strategy', byName['scan then guess'].hunter < 60,
-   `${byName['scan then guess'].hunter.toFixed(1)}%`],
+  /* The scan must be worth nothing to a player who cannot reason about the
+   * technique, and worth it in both directions: ruling the partial out and
+   * taking it have to land on the same number as a blind flip. */
+  ['scan gains a knowledge-free player nothing (ruling the partial out)',
+   Math.abs(byName['scan then guess'].hunter - blind.hunter) < 6,
+   `${sign(byName['scan then guess'].hunter - blind.hunter)} vs blind`],
+  ['scan gains a knowledge-free player nothing (taking the partial)',
+   Math.abs(byName['scan then take it'].hunter - blind.hunter) < 6,
+   `${sign(byName['scan then take it'].hunter - blind.hunter)} vs blind`],
   /* Reachability is a property of the ladder, not of blind play — blind
    * Champion is meant to be near-impossible, so testing it empirically at
    * this sample size measured noise. Checked across every strategy in the
@@ -363,9 +450,9 @@ const checks = [
   /* Live on ANY axis. Different cards act on different quantities and
    * scoring them all by the index is what reported three of six as dead
    * when two of them were only invisible. */
-  ['every readiness card is a live choice on some axis',
-   cards.every((c) => c.dIndex >= 3 || Math.abs(c.dClosed) >= 8 || c.dDefense >= 0.4 || c.dLost <= -0.35),
-   cards.filter((c) => !(c.dIndex >= 3 || Math.abs(c.dClosed) >= 8 || c.dDefense >= 0.4 || c.dLost <= -0.35)).map((c) => c.id).join(' ') || 'all live'],
+  ['every readiness card is a live choice for one of the two players',
+   cards.every((c) => c.live),
+   cards.filter((c) => !c.live).map((c) => c.id).join(' ') || 'all live'],
   ['no two-card build solves the run (Champion under 25%)',
    PAIRS.every((p) => p.champ < 25), `worst ${Math.max(...PAIRS.map((p) => p.champ)).toFixed(1)}%`],
   ['all three pillars correct at some stage position',

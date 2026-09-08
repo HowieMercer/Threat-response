@@ -17,7 +17,7 @@
       "rank": "exactly one 'best', one 'partial', one 'weak' across manage/secure/recover",
       "act": "what each pillar's card offers to DO here. Written as an order, not a product name.",
       "fb": "why that choice landed the way it did. Explains the reasoning, never just right or wrong.",
-      "inject": "optional. A live inject that fires mid-stage: { at, seconds, label, action, ok, miss }. 'at' is intrusion depth 0-100."
+      "inject": "optional. A live inject: { after, seconds, label, action, ok, miss }. 'after' is seconds into the stage, and it must be under 3 so the inject lands before the lead decision rather than on top of it. 'seconds' is the answer window."
     },
     "answerKeyRule": "Every pillar must be 'best' at least once at every stage position. If a player can win by pattern-matching stage number, the score stops being a diagnostic and a security professional will notice within two runs."
   },
@@ -50,7 +50,7 @@
             "recover": "Breached. A clean restore point does not close an open door. The appliance answered, and BlackVault walked through it."
           },
           "inject": {
-            "at": 55,
+            "after": 2.4,
             "seconds": 5,
             "label": "Appliance is dialing out to an unknown host",
             "action": "Sever the tunnel",
@@ -102,7 +102,7 @@
             "recover": "Contained. They came for the recovery capability first, on purpose. Immutability is what makes that visit pointless — and it had to be on before they arrived."
           },
           "inject": {
-            "at": 60,
+            "after": 2.6,
             "seconds": 5,
             "label": "Retention policy edit submitted: 30 days to 1 day",
             "action": "Reject the change",
@@ -154,7 +154,7 @@
           "act": {
             "manage": "Sweep every endpoint and strip the task",
             "secure": "Alert on the beacon and contain the known hosts",
-            "recover": "Roll those machines to a pre-task restore point"
+            "recover": "Roll all of those machines to a pre-task restore point"
           },
           "fb": {
             "manage": "Contained. Persistence is a configuration problem across every machine, not an incident on four of them. You looked everywhere and found the ones nobody had reported.",
@@ -184,7 +184,7 @@
             "recover": "Contained. A silenced agent is an attack on your recovery, executed early and quietly. A second, independent copy is what makes it survivable."
           },
           "inject": {
-            "at": 50,
+            "after": 2.2,
             "seconds": 5,
             "label": "Second agent going silent: database server",
             "action": "Force an out-of-band snapshot",
@@ -288,7 +288,7 @@
             "recover": "Breached. You restored the machine. The credentials were never in the machine — they were in memory, and now they are in a text file somewhere else."
           },
           "inject": {
-            "at": 58,
+            "after": 2,
             "seconds": 5,
             "label": "Domain admin credential authenticating from a workstation",
             "action": "Disable the account",
@@ -384,7 +384,7 @@
           "act": {
             "manage": "Block the destination and restrict egress",
             "secure": "Kill the transfer and scope exactly what left",
-            "recover": "Confirm both directories are backed up intact"
+            "recover": "Confirm both of those directories are backed up intact"
           },
           "fb": {
             "manage": "Mitigated. Egress control stops the remaining transfer and every future one. Six hours of it already completed, and you cannot tell the client how much.",
@@ -414,7 +414,7 @@
             "recover": "Contained. The credential was a path to your recovery capability. Rotating it and re-sealing the vault closes the path while it is still only a path."
           },
           "inject": {
-            "at": 62,
+            "after": 2,
             "seconds": 4,
             "label": "Vault sign-in attempt with the service account",
             "action": "Break the session",
@@ -540,7 +540,7 @@
             "recover": "Mitigated. Restores for three hundred endpoints is a fortnight of work you have now committed to, for a job you could have deleted while it sat in a queue."
           },
           "inject": {
-            "at": 45,
+            "after": 1.8,
             "seconds": 4,
             "label": "Deployment schedule moved forward: 18:00 to now",
             "action": "Freeze the console",

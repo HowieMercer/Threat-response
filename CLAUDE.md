@@ -124,7 +124,7 @@ Two more that are easy to erode:
   "act":    { "manage": "…", "secure": "…", "recover": "…" },
   "fb":     { "manage": "…", "secure": "…", "recover": "…" },
   "inject": {
-    "at": 55, "seconds": 5,
+    "after": 2.4, "seconds": 5,
     "label":  "Appliance is dialing out to an unknown host",
     "action": "Sever the tunnel",
     "ok":     "What happens if they hit it.",
@@ -147,7 +147,12 @@ Two more that are easy to erode:
 - `fb` — why the choice landed as it did. Explains the reasoning; never just
   right or wrong. This is where the teaching happens, so it is the field worth
   spending the most time on.
-- `inject` — optional. A live inject firing at intrusion depth `at`. Keep them
+- `inject` — optional. A live inject firing `after` seconds into the stage,
+  answerable for `seconds`. Timed on the stage clock rather than on intrusion
+  depth, because the five stages run on different clocks and the same depth
+  number is a different moment in each of them — depth 45 is nine seconds into
+  stage one and under three into stage five. Keep `after` under 3 so the inject
+  lands in its own beat rather than on top of the lead decision, and keep them
   rare: they exist to break the pick-pick rhythm, and one per stage would
   become the rhythm.
 

@@ -513,13 +513,14 @@
 .pill.backup {
   border-color: var(--tone);
 }
-/* Scan result. Reveals the weakest layer, never the strongest — unless a
- * complete asset inventory was bought before the attack. */
-.pill.flagged-weak {
-  opacity: 0.55;
+/* Scan result. Marks the partial fit — never the strongest layer and never
+ * the weakest, whatever was bought before the attack. Amber, not red, and
+ * the card keeps full opacity: this says "this one helps but is not the
+ * strongest play here", not "rule this one out". */
+.pill.flagged-partial {
+  border-color: var(--amber);
 }
-.pill.flagged-weak .pill-flag,
-.pill.flagged-best .pill-flag {
+.pill.flagged-partial .pill-flag {
   display: inline-flex;
 }
 .pill-flag {
@@ -534,13 +535,9 @@
   border-radius: 4px;
   margin-bottom: 7px;
 }
-.pill.flagged-weak .pill-flag {
-  background: rgb(var(--red-rgb) / 20%);
-  color: var(--red-b);
-}
-.pill.flagged-best .pill-flag {
-  background: rgb(var(--green-rgb) / 18%);
-  color: var(--green-b);
+.pill.flagged-partial .pill-flag {
+  background: rgb(var(--amber-rgb) / 20%);
+  color: var(--amber-b);
 }
 
 /* -------------------------------------------------------------- comms */
@@ -619,24 +616,34 @@
   }
 }
 
-/* -------------------------------------------------------------- inject */
-
+/* -------------------------------------------------------------- inject
+ *
+ * Top-anchored, and that is the whole point of this block. v13 docked it
+ * to the bottom at 460px wide, and at 375x667 the three pillar cards are
+ * the bottom of the board — the game covered the controls it was asking
+ * the player to use, while the clock ran. Anchored to the top it sits over
+ * the HUD strip and the head of the intrusion track for its four or five
+ * seconds, and the track is the one thing on screen whose state the
+ * inject's own countdown bar already tells you.
+ *
+ * The 2px border and the flat fill are deliberate: this has to read as an
+ * alarm on a near-white page, where a glow does almost nothing. */
 .inject {
   position: fixed;
   left: 50%;
-  bottom: calc(22px + env(safe-area-inset-bottom));
+  top: calc(10px + env(safe-area-inset-top));
   transform: translateX(-50%);
   z-index: 40;
   width: min(460px, calc(100vw - 28px));
   padding: 13px 14px;
   border-radius: var(--r);
-  border: 1px solid var(--red);
-  background: linear-gradient(180deg, rgb(var(--red-deep-rgb) / 96%), rgb(var(--bg2-rgb) / 97%));
-  box-shadow: 0 24px 60px -20px rgb(var(--red-glow-rgb) / 80%);
+  border: 2px solid var(--red-b);
+  background: linear-gradient(180deg, rgb(var(--red-deep-rgb) / 98%), rgb(var(--panel-rgb) / 99%));
+  box-shadow: 0 22px 54px -18px rgb(var(--red-rgb) / 55%), var(--shadow-xl);
   animation: inject-in 0.26s var(--snap) both;
 }
 @keyframes inject-in {
-  from { opacity: 0; transform: translate(-50%, 16px) scale(0.97); }
+  from { opacity: 0; transform: translate(-50%, -16px) scale(0.97); }
   to { opacity: 1; transform: translate(-50%, 0) scale(1); }
 }
 .inject-label {

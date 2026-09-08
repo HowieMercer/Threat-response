@@ -42,6 +42,10 @@ export function outcomeFor(variant, lead, backup) {
  */
 export const BACKUPS_CAN_FALL_FROM_STAGE = 4; // 1-indexed
 
+/* How far down a system can be pushed by one stage. Only the vault has a
+ * floor of its own: immutable copies cannot be deleted, and before stage
+ * four the vault degrades rather than falls so that losing it lands at the
+ * climax instead of as an anticlimax in stage one. */
 export function estateFloor(system, stageNumber, posture) {
   if (system !== 'backups') return 0;
   if (posture.has('immutable-vault')) return 1;
@@ -60,13 +64,21 @@ function damage(estate, system, amount, stageNumber, posture) {
  * has no next move. */
 const RECOVERY_PRIORITY = ['backups', 'databases', 'identity', 'fileserver', 'cloud', 'endpoints'];
 
-function restore(estate, count) {
+/* A restore without a rehearsed runbook gets a system part of the way
+ * back. A tested one gets it back to service, which is the whole
+ * difference between having backups and being able to restore from them
+ * and is the only claim the drill card needs to make. Measured, it is also
+ * the difference between the card mattering and not: at +1 it moved
+ * systems lost by 0.23 over 1,333 runs, which on a board of six cards is
+ * indistinguishable from a dead choice. */
+function restore(estate, count, full) {
   const out = [];
   for (let i = 0; i < count; i++) {
     const candidates = RECOVERY_PRIORITY.filter((k) => estate[k] < 2 && !out.some((o) => o.system === k));
     if (!candidates.length) break;
     const system = candidates.sort((a, b) => estate[a] - estate[b])[0];
-    out.push({ system, before: estate[system], after: estate[system] + 1, delta: 1 });
+    const after = full ? 2 : estate[system] + 1;
+    out.push({ system, before: estate[system], after, delta: after - estate[system] });
   }
   return out;
 }
@@ -90,31 +102,47 @@ export function resolveStage({ variant, stageNumber, lead, backup, estate, depth
   const changes = [];
 
   if (outcome === 'breached') {
-    const d = damage(next, variant.target, 2, stageNumber, posture);
+    /* An enforced patch window does not stop a wrong call, but it decides
+     * how much a wrong call costs. An unpatched box that gets hit is owned;
+     * a patched one that gets hit is disrupted. Two points against one. */
+    const blast = posture.has('patch-cadence') ? 1 : 2;
+    const d = damage(next, variant.target, blast, stageNumber, posture);
     next[d.system] = d.after;
     if (d.delta !== 0 || d.held) changes.push({ ...d, kind: 'loss' });
   } else if (outcome === 'mitigated' || outcome === 'mitigated_backed') {
-    const d = damage(next, variant.target, 1, stageNumber, posture);
-    next[d.system] = d.after;
-    if (d.delta !== 0 || d.held) changes.push({ ...d, kind: 'degrade' });
+    /* A complete asset inventory does not stop an attack. It decides
+     * whether a stage you only slowed down costs you anything at all:
+     * you know what the box is, what runs on it and what depends on it,
+     * so you keep it in service instead of taking it down to find out.
+     *
+     * Paired with the patch window this is the Manage pillar's whole
+     * argument split into its two halves — patching decides how much a
+     * mistake costs, inventory decides how often a near-miss costs
+     * anything — and neither is a version of the other. */
+    if (!posture.has('asset-inventory')) {
+      const d = damage(next, variant.target, 1, stageNumber, posture);
+      next[d.system] = d.after;
+      if (d.delta !== 0 || d.held) changes.push({ ...d, kind: 'degrade' });
+    }
   }
 
   /* Recovery.
    *
    * A perfect stack always brings a system back. The tested-runbook card
-   * extends that to any contained stage, and makes a perfect stack worth
-   * two.
+   * extends that to any stage the attacker did not get through, and makes
+   * a perfect stack worth two.
    *
    * v13 gated the card on a perfect stack only, and a perfect stack with
    * damage available to repair is rare enough that 3,000 measured runs put
-   * the card's value at +0.6 index — statistically nothing. A rehearsed
-   * restore is something you use during the incident, not only on the one
-   * stage you played flawlessly, so this is also the more truthful
-   * reading. */
+   * the card's value at +0.6 index — statistically nothing. Widening it to
+   * contained stages measured -0.26 systems lost, still the weakest card
+   * on the board. A rehearsed restore is a thing you do while the incident
+   * is running, on every hour you are not actively losing, so the honest
+   * rule is any stage that was not a breach. */
   const drilled = posture.has('restore-drill');
-  const restores = outcome === 'perfect' ? (drilled ? 2 : 1) : (drilled && outcome === 'contained' ? 1 : 0);
+  const restores = outcome === 'perfect' ? (drilled ? 2 : 1) : (drilled && outcome !== 'breached' ? 1 : 0);
   if (restores > 0) {
-    const gained = restore(next, restores);
+    const gained = restore(next, restores, drilled);
     for (const g of gained) {
       next[g.system] = g.after;
       changes.push({ ...g, kind: 'restore' });

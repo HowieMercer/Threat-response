@@ -62,7 +62,7 @@ Adding a scenario means editing one JSON file. The schema is documented in
 
 ## Playing it
 
-- **1 / 2 / 3** pick a layer, **S** scan, **H** isolate, **Space** answers a
+- **1 / 2 / 3** pick a layer, **S** scan, **H** isolate, **X** answers a
   live inject, **Enter** is the primary action, **R** replays, **M** sound,
   **?** the rules. The whole game is completable without a mouse.
 - **Learn mode** removes the clock. The decisions and the answer key are

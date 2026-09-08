@@ -55,7 +55,7 @@ export function createStageScreen(app) {
 
   const capPips = h('div', { class: 'cap-pips' }, ...Array.from({ length: CAPACITY_MAX }, () => h('i')));
   const scanBtn = h('button', {
-    class: 'ops-btn', type: 'button', title: 'Reveal the weakest layer (S)',
+    class: 'ops-btn', type: 'button', title: 'Reveal which layer is only a partial fit (S)',
     onclick: () => doScan(),
   }, 'Scan', h('span', { class: 'cost' }, `${SCAN_COST}`));
   const holdBtn = h('button', {
@@ -146,9 +146,9 @@ export function createStageScreen(app) {
         case 'stage':
           break;
         case 'scan':
-          pillars.reveal({ weak: ev.weak });
+          pillars.reveal({ partial: ev.partial });
           app.audio.scan();
-          announce(`Scan complete. ${DEF[ev.weak].name} is the weakest layer here. The other two are still a decision.`);
+          announce(`Scan complete. ${DEF[ev.partial].name} is a partial fit for this technique. Which of the other two is the stronger play is still yours to work out.`);
           refreshOps();
           break;
         case 'hold':
@@ -218,12 +218,9 @@ export function createStageScreen(app) {
     /* Shows how many are left, because "which stage do I spend it on" is
      * the decision the card exists to create. */
     scanBtn.querySelector('.cost').textContent = freeScan ? `FREE ×${s.freeScans}` : String(SCAN_COST);
-    scanBtn.disabled = s.revealed.weak || (!freeScan && s.capacity < SCAN_COST);
+    scanBtn.disabled = s.revealed.partial || (!freeScan && s.capacity < SCAN_COST);
 
-    const freeHold = s.posture.has('asset-inventory') && !s.freeHoldUsed;
-    holdBtn.classList.toggle('free', freeHold);
-    holdBtn.querySelector('.cost').textContent = freeHold ? 'FREE' : String(HOLD_COST);
-    holdBtn.disabled = (!freeHold && s.capacity < HOLD_COST) || s.mode === 'learn';
+    holdBtn.disabled = s.capacity < HOLD_COST || s.mode === 'learn';
     holdBtn.title = s.mode === 'learn' ? 'No timer in learn mode — nothing to take back' : 'Isolate a segment and take ground back (H)';
   }
 
@@ -233,27 +230,51 @@ export function createStageScreen(app) {
    * exists to break the pick-pick rhythm — five identical turns is a
    * questionnaire however good the writing is. Kept rare, always fair,
    * always survivable if missed.
+   *
+   * Three things v13 did that made it unanswerable, all fixed here and all
+   * for the same reason: the reflex channel must not take the decision
+   * channel's screen space, focus or keys.
+   *
+   *   - It was a bottom-anchored panel 460px wide. On a 375x667 phone the
+   *     three pillar cards ARE the bottom of the board, so the panel sat
+   *     on top of the controls the player was being asked to use.
+   *   - It called focus() on its own button, so a player who had tabbed to
+   *     a pillar card lost their place mid-decision, and lost it again to
+   *     document.body when the node was removed.
+   *   - It claimed Space and Enter globally, so a focused pillar card
+   *     could not be activated by keyboard while it was up.
+   *
+   * It now docks to the top, takes no focus, and owns one key nothing else
+   * uses. Both channels stay live: answering it is optional, ignoring it
+   * costs ground, and that is the trade it exists to create.
    */
+  let injectSeq = 0;
+
   function showInject(inject) {
     closeInject();
     app.audio.alarm();
     injectBar = h('i');
+    const labelId = `inject-label-${++injectSeq}`;
     const act = h('button', {
-      class: 'btn', type: 'button', 'data-autofocus': '',
+      class: 'btn', type: 'button', 'aria-describedby': labelId,
       onclick() {
         game.resolveInject(true);
         drain();
       },
-    }, inject.action, h('span', { class: 'kbd' }, 'SPACE'));
+    }, inject.action, h('span', { class: 'kbd' }, 'X'));
 
-    injectEl = h('div', { class: 'inject', role: 'alertdialog', 'aria-label': 'Live inject' },
-      h('div', { class: 'inject-label' }, h('strong', null, 'LIVE — '), inject.label),
+    injectEl = h('div', { class: 'inject', role: 'group', 'aria-label': 'Live inject' },
+      h('div', { class: 'inject-label', id: labelId }, h('strong', null, 'LIVE — '), inject.label),
       h('div', { class: 'inject-row' }, act),
       game.state.mode === 'learn' ? null : h('div', { class: 'inject-bar' }, injectBar)
     );
-    document.body.appendChild(injectEl);
-    act.focus({ preventScroll: true });
-    announce(`Live inject. ${inject.label}. ${inject.action}.`);
+    /* Inside the pick area rather than on document.body, so Tab from the
+     * last pillar card reaches the action next. Position is fixed, so it
+     * still costs the board no layout — and the pick area has no transform
+     * or containment that would make it the containing block instead of
+     * the viewport. */
+    pickArea.appendChild(injectEl);
+    announce(`Live inject. ${inject.label}. Press X to ${inject.action.toLowerCase()}.`);
   }
 
   function closeInject() {
@@ -460,7 +481,12 @@ export function createStageScreen(app) {
     const tag = document.activeElement?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
-    if (game.state.inject && (e.key === ' ' || e.key === 'Enter')) {
+    /* X, and only X. Space and Enter belong to whatever the player has
+     * focused — usually a pillar card — and taking them was what made the
+     * inject and the decision mutually exclusive. Space and Enter still
+     * fire the inject natively when its own button has focus, which is
+     * where a keyboard player who chose to answer it will be. */
+    if (game.state.inject && e.key.toLowerCase() === 'x') {
       e.preventDefault();
       game.resolveInject(true);
       drain();

@@ -51,6 +51,13 @@ export const HOLD_PUSHBACK = 18;
  * not to scan is having no capacity left. */
 export const SCAN_DEPTH_COST = 8;
 
+/* 24/7 monitored response also slows the attacker down before you have
+ * committed to anything, because somebody was already engaging while you
+ * were still reading. This is the half of the card that does not depend on
+ * the player knowing any security — see the note on scan() below for why
+ * that matters, and postures.json for what the card claims. */
+export const WATCH_SLOWDOWN = 0.7;
+
 /* Free scans granted by 24/7 monitored response.
  *
  * v13 gave one free scan every stage, which measured at +33.0 index —
@@ -149,12 +156,12 @@ export function createGame({ data, seed, mode = 'timed' }) {
     stageIndex: 0,
     variant: null,
     depth: 0,
+    stageElapsed: 0,
     capacity: CAPACITY_START,
     freeScans: 0,
-    freeHoldUsed: false,
     lead: null,
     backup: null,
-    revealed: { weak: false },
+    revealed: { partial: false },
     estate: Object.fromEntries(data.estate.systems.map((s) => [s.id, 2])),
     streak: 0,
     inject: null,
@@ -227,23 +234,26 @@ export function createGame({ data, seed, mode = 'timed' }) {
       emit('begin', { opener: state.opener });
     },
 
-    /* Time. Called with elapsed milliseconds. In learn mode nothing moves
-     * on its own, which is the entire difference between the modes — the
-     * decisions and the answer key are identical. */
+    /* Time. Called with elapsed milliseconds. In learn mode the attacker
+     * does not advance and the stage never times out, which is the entire
+     * difference between the modes — the decisions and the answer key are
+     * identical.
+     *
+     * The stage clock still runs in learn mode. It has to: injects are
+     * scheduled against time in the stage rather than ground lost, so
+     * before this a learn-mode player never saw one at all. */
     tick(dtMs) {
       if (state.phase !== PHASE.STAGE) return events.splice(0);
-      if (state.mode === 'learn') {
-        if (state.inject) tickInject(dtMs);
-        return events.splice(0);
-      }
+      state.stageElapsed += dtMs;
 
-      const rate = state.rate * (state.lead ? LEAD_SLOWDOWN : 1);
-      state.depth = Math.min(100, state.depth + rate * dtMs);
+      if (state.mode !== 'learn') {
+        state.depth = Math.min(100, state.depth + liveRate() * dtMs);
+      }
 
       if (state.inject) tickInject(dtMs);
       else maybeFireInject();
 
-      if (state.depth >= 100) {
+      if (state.mode !== 'learn' && state.depth >= 100) {
         /* Out of ground. A committed lead still resolves — you decided,
          * you just did not finish the stack. Nothing committed is a
          * breach, because indecision is a decision at this speed. */
@@ -254,18 +264,43 @@ export function createGame({ data, seed, mode = 'timed' }) {
 
     /* ---------------------------------------------------------- actions */
 
-    /* Reveal the weakest layer for this scenario. Never the strongest, by
-     * anybody, for any price.
+    /* Reveal which layer is a partial fit. Never the strongest and never
+     * the weakest, by anybody, for any price.
      *
-     * v13 let the asset-inventory readiness card reveal `best` as well, and
-     * paired with the free scan from soc-watch that reached index 96.6 and
-     * Threat Hunter 100% of the time — two of three budget points, played
-     * by someone with no security knowledge. A card that reveals the
-     * correct answer is a card that deletes the game. Visibility narrows
-     * the field; it does not hand over the answer. */
+     * This is the most consequential rule in the game and it took three
+     * measurements to get right, so the reasoning is here rather than in a
+     * commit message.
+     *
+     * v13 revealed the WEAKEST layer. That eliminates the one pick that
+     * breaches, so a player who presses S and then flips a coin between
+     * the two survivors expects 1.5 defense points a stage against 1.0 for
+     * a coin flip across all three. Measured over 40,000 runs that is
+     * Threat Hunter 74% of the time with no security knowledge at all —
+     * against 38% blind. An earlier pass tried to fix it by pricing scan
+     * at two capacity so a run affords three rather than five; that moved
+     * it from 80% to 74%, because the problem was never the frequency.
+     * The problem is that eliminating the worst option is worth a lot and
+     * costs no knowledge.
+     *
+     * Revealing the PARTIAL layer is worth exactly nothing to the same
+     * player, and the arithmetic is the point: avoid it and you are
+     * choosing between best and weak, 0.5 x 2 + 0.5 x 0 = 1.0; take it and
+     * you get a mitigated stage, 1.0. Either way 1.0, the same as a blind
+     * flip. It is worth a great deal to someone who can reason about the
+     * technique — knowing that detection is only a partial fit for T1490
+     * tells you the shape of the problem, and the shape is the answer.
+     *
+     * So the scan is skill-multiplying rather than skill-substituting,
+     * which is also the honest claim for the product it represents:
+     * telemetry makes a good team better and does not replace one. The
+     * cost is that a purely knowledge-free player gains nothing from it,
+     * and the readiness card that grants free scans had to stop being a
+     * pure information card as a result. It gained the clause about
+     * analysts already engaging, which is the other half of what an MDR
+     * service actually sells. */
     scan() {
       if (state.phase !== PHASE.STAGE) return false;
-      if (state.revealed.weak) return false;
+      if (state.revealed.partial) return false;
       const free = posture.has('soc-watch') && state.freeScans > 0;
       if (!free && state.capacity < SCAN_COST) {
         emit('blocked', { reason: 'No response capacity left this stage.' });
@@ -274,10 +309,17 @@ export function createGame({ data, seed, mode = 'timed' }) {
       if (free) state.freeScans -= 1;
       else state.capacity -= SCAN_COST;
 
-      state.revealed.weak = true;
-      if (state.mode !== 'learn') state.depth = Math.min(100, state.depth + SCAN_DEPTH_COST);
+      state.revealed.partial = true;
+      /* A free scan costs no ground either. An analyst who is already
+       * watching has already run the query — you are reading a result, not
+       * waiting for one. Without this the card was measurably WORSE than
+       * not buying it for a player who cannot act on what it says: three
+       * extra scans at eight points of ground each, for information they
+       * could not use. A readiness card that punishes the player who
+       * bought it is worse than a dead one. */
+      if (state.mode !== 'learn' && !free) state.depth = Math.min(100, state.depth + SCAN_DEPTH_COST);
       emit('scan', {
-        weak: PILLARS.find((p) => state.variant.rank[p] === 'weak'),
+        partial: PILLARS.find((p) => state.variant.rank[p] === 'partial'),
         free,
       });
       return true;
@@ -286,24 +328,24 @@ export function createGame({ data, seed, mode = 'timed' }) {
     /* Buy ground back. Containment is time, and time is the only thing
      * this stage is actually made of.
      *
-     * A complete asset inventory makes the first isolate of each stage
-     * free: knowing exactly what you own is what lets you cut a segment off
-     * without spending an analyst working out what is on it. That splits
-     * the two Manage/Secure information cards cleanly — soc-watch buys
-     * information, asset-inventory buys time — and it replaced an effect
-     * measured at +0.4 index, which is a dead choice on a board of six. */
+     * No readiness card discounts this any more. An earlier pass made the
+     * first isolate of each stage free under a complete asset inventory,
+     * and measured it at +0.2 index — because ground is worth very little
+     * to a player who decides in four seconds on a thirteen-second clock,
+     * and every card that bought ground measured the same way. Three of
+     * six cards were buying a currency the game barely spends. The
+     * inventory card now acts on the estate instead, where the consequence
+     * actually lands. */
     hold() {
       if (state.phase !== PHASE.STAGE) return false;
-      const free = posture.has('asset-inventory') && !state.freeHoldUsed;
-      if (!free && state.capacity < HOLD_COST) {
+      if (state.capacity < HOLD_COST) {
         emit('blocked', { reason: 'No response capacity left this stage.' });
         return false;
       }
-      if (free) state.freeHoldUsed = true;
-      else state.capacity -= HOLD_COST;
+      state.capacity -= HOLD_COST;
       const before = state.depth;
       state.depth = Math.max(0, state.depth - HOLD_PUSHBACK);
-      emit('hold', { from: before, to: state.depth, free });
+      emit('hold', { from: before, to: state.depth });
       return true;
     },
 
@@ -411,9 +453,9 @@ export function createGame({ data, seed, mode = 'timed' }) {
     state.lead = null;
     state.backup = null;
     state.injectHit = undefined;
-    state.revealed = { weak: false };
-    state.freeHoldUsed = false;
+    state.revealed = { partial: false };
     state.inject = null;
+    state.stageElapsed = 0;
     state.capacity = Math.min(CAPACITY_MAX, state.capacity + 1);
 
     const prev = state.rounds[state.rounds.length - 1];
@@ -432,15 +474,58 @@ export function createGame({ data, seed, mode = 'timed' }) {
     });
   }
 
+  /* When the inject is allowed to fire.
+   *
+   * v13 scheduled these on intrusion depth, and depth is the wrong unit
+   * for the job. The five stages run on 20/18/16/14/13-second clocks and
+   * each one starts from wherever the last one left the attacker, so the
+   * same depth number is a different moment in every stage: depth 45 is
+   * nine seconds into stage one and under three seconds into stage five.
+   * The published values landed at depth 45-62, which for a timed player
+   * is the second or two either side of committing a lead — so the one
+   * moment in the game that asks for a reflex arrived on top of the one
+   * moment that asks for a decision, and the player got neither.
+   *
+   * Scheduled on time in the stage it lands in its own beat, just after
+   * the threat card has been read and before the lead is picked, on every
+   * stage and in learn mode too. It also makes the mechanic matter more
+   * rather than less: the 12 points of ground a hit buys back used to be
+   * spent two seconds before the stage resolved, where it changed almost
+   * nothing. Now it shapes the rest of the stage.
+   *
+   * Three guards, and each defers rather than drops, so an inject fires at
+   * the first legal moment instead of being lost. */
+  /* The attacker's current speed. Committing a lead slows them because you
+   * have started responding; monitored response slows them before that
+   * because somebody else already had. Deliberately the same slowdown
+   * whether the lead was right or wrong — a track that speeds up on a bad
+   * pick would leak the answer before the player had finished deciding. */
+  function liveRate() {
+    let r = state.rate;
+    if (state.lead) r *= LEAD_SLOWDOWN;
+    else if (posture.has('soc-watch')) r *= WATCH_SLOWDOWN;
+    return r;
+  }
+
   function maybeFireInject() {
     const inj = state.variant.inject;
     if (!inj || state.injectHit !== undefined) return;
-    if (state.depth < inj.at) return;
-    /* Reduced-motion and learn-mode players get a window that does not
-     * punish a slow hand. The decision is the same; only the stopwatch
-     * changes. */
-    const seconds = state.mode === 'learn' ? Infinity : inj.seconds;
-    state.inject = { ...inj, remaining: seconds * 1000, total: seconds * 1000 };
+    if (state.stageElapsed < inj.after * 1000) return;
+
+    /* 1. Never into a half-built stack. A lead committed with no backup
+     *    yet is the most expensive interruption in the game — the player
+     *    is holding a partial decision and cannot put it down. */
+    if (state.lead && !state.backup) return;
+
+    /* 2. Never a window the stage clock will cut off. An inject that
+     *    expires because the stage ended is an alarm with no answer, and
+     *    it reads as the game cheating. */
+    const window = state.mode === 'learn' ? Infinity : inj.seconds * 1000;
+    if (state.mode !== 'learn' && state.depth + liveRate() * window >= 100) return;
+
+    /* Learn mode gets a window that does not punish a slow hand. The
+     * decision is the same; only the stopwatch changes. */
+    state.inject = { ...inj, remaining: window, total: window };
     emit('inject', { inject: state.inject });
   }
 
