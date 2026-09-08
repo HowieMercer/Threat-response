@@ -46,10 +46,10 @@ export const CONFIG = {
 
   /* Scorecard delivery. The game does not send email and has never had a
    * mail path. Set this true only when CONFIG.metricsEndpoint actually
-   * fulfils one, because it is what switches the confirmation copy from
+   * fulfills one, because it is what switches the confirmation copy from
    * "saved on this device" to "on its way to your inbox". Promising a mail
    * that no code sends is the one bug a prospect experiences personally. */
-  emailFulfilment: false,
+  emailFulfillment: false,
 };
 
 /* Stage pacing. The intrusion track crosses the board in this many seconds

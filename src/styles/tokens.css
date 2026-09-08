@@ -1,55 +1,111 @@
-/* Design tokens — extracted verbatim from v12's :root block.
-   These values are confirmed against the original source. Everything else
-   in src/styles/ still needs extracting from v12-original.html. */
+/* Tokens first: fonts, color, spacing, radii. Nothing in here paints
+ * anything — it only names things. Everything else imports from here.
+ *
+ * Fonts are self-hosted. v12 pulled four families from Google Fonts,
+ * which meant the "one offline file, no network" line in customer-facing
+ * material was not true, and the game rendered in system sans-serif on
+ * exactly the machines it was built for: a USB stick at a stand, a
+ * locked-down laptop, a venue with no wifi.
+ *
+ * Cost of fixing it: 44.8 KB of woff2, subset to Latin plus the
+ * typographic marks the UI actually uses. Inter and JetBrains Mono are
+ * variable fonts, so one file each covers every weight. Space Grotesk was
+ * dropped — four families for one page was one too many, and it was only
+ * ever doing what Chakra Petch already does.
+ */
 
-:root {
-  /* Base — deep violet-black, reads as a console without the
-     black-and-acid-green cliché */
-  --bg: #0C0820;
-  --bg2: #140A2C;
-  --panel: #190F3A;
-  --panel2: #22165A;
-  --line: #2C2058;
-  --line2: #3E2E80;
-
-  /* Text */
-  --text: #EDE9FB;
-  --dim: #A99FC8;
-  --faint: #6A5E92;
-
-  /* State colours. Each has a -deep fill for behind text and, where
-     needed, a -b brighter accent. */
-  --green: #33E6AE;
-  --green-b: #82FFD2;
-  --green-deep: #0C3327;
-
-  --blue: #4FA8FF;
-  --blue-deep: #10254A;
-
-  --violet: #C9A6FF;
-  --violet-deep: #2C1C5A;
-
-  --amber: #FFB23E;
-  --amber-deep: #3A2A0E;
-
-  --red: #FF4D67;
-  --red-b: #FF8198;
-  --red-deep: #3A0E1A;
-
-  /* N-able violet — primary brand accent */
-  --brand: #8B5CF6;
-  --brand-b: #B794F6;
-  --brand-deep: #1E1248;
-
-  /* Radii */
-  --r: 16px;
-  --r-sm: 11px;
+@font-face {
+  font-family: 'Chakra Petch';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block; /* block, not swap: a reflow of the HUD mid-countdown is worse than 100ms of nothing */
+  src: url('../assets/fonts/chakra-petch-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Chakra Petch';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('../assets/fonts/chakra-petch-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: block;
+  src: url('../assets/fonts/inter-var.woff2') format('woff2-variations');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: block;
+  src: url('../assets/fonts/jetbrains-mono-var.woff2') format('woff2-variations');
 }
 
-/* Self-hosted @font-face rules go here once the woff2 files are in
-   src/assets/fonts/. Until then the game falls back to system fonts
-   with no network — which is exactly the bug worth fixing first.
+:root {
+  --bg: #0c0820;
+  --bg2: #140a2c;
+  --panel: #190f3a;
+  --panel2: #22165a;
+  --line: #2c2058;
+  --line2: #3e2e80;
 
-   Families in v12: Chakra Petch (500/600/700), Space Grotesk (500/600/700),
-   Inter (400/500/600), JetBrains Mono (500/700). Check which are actually
-   used before downloading all of them. */
+  --text: #ede9fb;
+  --dim: #a99fc8;
+  --faint: #6a5e92;
+
+  --green: #33e6ae;
+  --green-b: #82ffd2;
+  --green-deep: #0c3327;
+
+  --blue: #4fa8ff;
+  --blue-b: #96ccff;
+  --blue-deep: #10254a;
+
+  --violet: #c9a6ff;
+  --violet-b: #e2ccff;
+  --violet-deep: #2c1c5a;
+
+  --amber: #ffb23e;
+  --amber-b: #ffd08a;
+  --amber-deep: #3a2a0e;
+
+  --red: #ff4d67;
+  --red-b: #ff8198;
+  --red-deep: #3a0e1a;
+
+  --brand: #8b5cf6;
+  --brand-b: #b794f6;
+  --brand-deep: #1e1248;
+
+  --r: 16px;
+  --r-sm: 11px;
+
+  --display: 'Chakra Petch', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Touch targets. 44px is the floor and it is not negotiable — this gets
+   * played on phones, standing up, by people holding a coffee. */
+  --tap: 44px;
+
+  /* The wrap's horizontal padding. Read by anything that needs to bleed to
+   * the page edge — hard-coding it in two places is how the result screen
+   * ended up with 6px of horizontal scroll on a phone. */
+  --wrap-pad: 20px;
+  --wrap-pad-b: 28px;
+
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --snap: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Per-pillar accents, so a card, a chip and a map marker for the same
+ * pillar can never drift apart. */
+.t-blue   { --tone: var(--blue);   --tone-b: var(--blue-b);   --tone-deep: var(--blue-deep); }
+.t-violet { --tone: var(--violet); --tone-b: var(--violet-b); --tone-deep: var(--violet-deep); }
+.t-green  { --tone: var(--green);  --tone-b: var(--green-b);  --tone-deep: var(--green-deep); }
+.t-amber  { --tone: var(--amber);  --tone-b: var(--amber-b);  --tone-deep: var(--amber-deep); }
+.t-red    { --tone: var(--red);    --tone-b: var(--red-b);    --tone-deep: var(--red-deep); }
+.t-brand  { --tone: var(--brand);  --tone-b: var(--brand-b);  --tone-deep: var(--brand-deep); }

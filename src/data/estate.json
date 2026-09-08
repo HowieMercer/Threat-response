@@ -5,7 +5,7 @@
       "id": "slug. Scenario 'target' values must match one of these.",
       "name": "shown on the map",
       "short": "shown at 375px, where the full name will not fit",
-      "loss": "one line, present tense, describing what stops working when this system is lost. Colour is never the only carrier of meaning — this is the text that carries it."
+      "loss": "one line, present tense, describing what stops working when this system is lost. Color is never the only carrier of meaning — this is the text that carries it."
     },
     "integrity": "Each system holds 2 (operational), 1 (degraded) or 0 (lost). A breach on the targeted system takes it to 0. A mitigated stage degrades it by 1. Recovery brings the worst-off system back up by 1."
   },

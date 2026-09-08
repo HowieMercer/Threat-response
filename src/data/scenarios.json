@@ -49,7 +49,7 @@
           "inject": {
             "at": 55,
             "seconds": 5,
-            "label": "Appliance is dialling out to an unknown host",
+            "label": "Appliance is dialing out to an unknown host",
             "action": "Sever the tunnel",
             "ok": "Tunnel cut before the second-stage payload finished pulling.",
             "miss": "Second stage pulled in full. The attacker no longer needs the exploit."
@@ -64,12 +64,12 @@
           "rank": { "manage": "partial", "secure": "best", "recover": "weak" },
           "act": {
             "manage": "Push a macro-blocking policy across the estate",
-            "secure": "Contain both endpoints and hunt the payload's behaviour",
+            "secure": "Contain both endpoints and hunt the payload's behavior",
             "recover": "Restore the two machines from this morning's image"
           },
           "fb": {
             "manage": "Mitigated. The policy protects the nine who have not clicked. It does nothing about the two processes already running.",
-            "secure": "Contained. Two endpoints were already executing — behavioural detection and isolation is the only control that acts after the click.",
+            "secure": "Contained. Two endpoints were already executing — behavioral detection and isolation is the only control that acts after the click.",
             "recover": "Breached. You reimaged two machines while the credentials they held were already in use elsewhere. Restore fixes the host, not the session."
           }
         },
@@ -103,7 +103,7 @@
           "tech": "T1621",
           "ta": "Credential Access",
           "name": "Multi-Factor Authentication Request Generation",
-          "desc": "A finance user has approved the ninth push prompt in four minutes. The session it authorised is live and is enumerating the tenant.",
+          "desc": "A finance user has approved the ninth push prompt in four minutes. The session it authorized is live and is enumerating the tenant.",
           "target": "identity",
           "rank": { "manage": "weak", "secure": "best", "recover": "partial" },
           "act": {
@@ -184,7 +184,7 @@
           },
           "fb": {
             "manage": "Breached. The host was compliant. Injection lives inside a process your inventory considers correct, so a clean compliance report is exactly what you would expect to see.",
-            "secure": "Contained. Nothing on disk means nothing for a file-based control to find. Behavioural detection in memory is the only place this is visible.",
+            "secure": "Contained. Nothing on disk means nothing for a file-based control to find. Behavioral detection in memory is the only place this is visible.",
             "recover": "Mitigated. The snapshot is genuinely useful and you will want it later. It did not remove the code that is running now."
           }
         },
@@ -223,7 +223,7 @@
           "target": "endpoints",
           "rank": { "manage": "best", "secure": "partial", "recover": "weak" },
           "act": {
-            "manage": "Randomise local admin passwords and block share-to-share traffic",
+            "manage": "Randomize local admin passwords and block share-to-share traffic",
             "secure": "Alert on the authentication pattern and contain each hop",
             "recover": "Snapshot the machines it has already reached"
           },

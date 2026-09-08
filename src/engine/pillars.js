@@ -36,6 +36,11 @@ export const DEF = {
   },
 };
 
+/* Reverse of PHASE_MAP. Needed for the run that loses nothing: there is
+ * no weakest phase to name, so the diagnosis is the pillar the player
+ * never led with, and that still has to resolve to an opener. */
+export const PILLAR_PHASE = { manage: 'before', secure: 'during', recover: 'after' };
+
 /* The gap diagnosis. Weakest phase maps to a pillar, a product, and an
  * opener a member of booth staff can use without any script training. That
  * mapping is the feature that turns a score into a conversation. */

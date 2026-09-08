@@ -16,7 +16,7 @@
  * entirely. resolveZone() below is the guard against that class of bug.
  */
 
-import { DEF, PHASE_MAP } from './pillars.js';
+import { DEF, PHASE_MAP, PILLAR_PHASE, PILLARS } from './pillars.js';
 
 /* Per-stage contribution to the index. A run of five perfect stacks reaches
  * 100; a run of five breaches floors at 3. Both ends are reachable, which
@@ -169,6 +169,32 @@ export function resolveZone(index, estate) {
  * actually did, so booth staff open on the player's own decision rather
  * than on a category. */
 export function gapDiagnosis(rounds) {
+  /* A run that held every stage has no weakest phase — all three tie at
+   * the ceiling, and naming one of them arbitrarily makes the diagnosis
+   * look broken to the one player most likely to scrutinise it. What is
+   * genuinely diagnostic about a clean run is the layer they never once
+   * reached for. */
+  if (rounds.length === 5 && rounds.every((r) => isContained(r.outcome))) {
+    const counts = { manage: 0, secure: 0, recover: 0 };
+    for (const r of rounds) if (r.lead) counts[r.lead]++;
+    const least = [...PILLARS].sort((a, b) => counts[a] - counts[b])[0];
+    const phase = PHASE_MAP[PILLAR_PHASE[least]];
+    const never = counts[least] === 0;
+    return {
+      key: 'clean',
+      label: 'None',
+      stages: [],
+      pillar: least,
+      favorite: [...PILLARS].sort((a, b) => counts[b] - counts[a])[0],
+      title: 'Nothing got through',
+      body: 'Five stages held. That is rare, and it is the run worth talking about — not because of the score, but because every stage you contained was contained by a layer that had to exist before the attack started.',
+      detail: never
+        ? `You never once led with ${DEF[least].name}. It was the right lead at least once in this pool, so the next run will find it.`
+        : `You leaned on ${DEF[least].name} least — ${counts[least]} of five stages. That is the layer most estates are thinnest in.`,
+      opener: phase.opener,
+    };
+  }
+
   const key = weakestPhase(rounds);
   const phase = PHASE_MAP[key];
   const inPhase = phase.stages.map((i) => rounds[i]).filter(Boolean);

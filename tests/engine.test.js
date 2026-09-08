@@ -1,10 +1,13 @@
-/* Engine behaviour and scoring maths. No DOM anywhere in here — if one of
+/* Engine behavior and scoring maths. No DOM anywhere in here — if one of
  * these tests ever needs jsdom, something has leaked out of src/engine/.
  */
 
 import { describe, it, expect } from 'vitest';
 import { DATA } from '../src/data/index.js';
-import { createGame, PHASE, businessOutcome, HOLD_PUSHBACK } from '../src/engine/game.js';
+import {
+  createGame, PHASE, businessOutcome, HOLD_PUSHBACK,
+  SCAN_COST, HOLD_COST, SCAN_DEPTH_COST, CAPACITY_START,
+} from '../src/engine/game.js';
 import { PILLARS } from '../src/engine/pillars.js';
 import { rightBackupFor } from '../src/engine/resolve.js';
 import {
@@ -215,16 +218,49 @@ describe('rules that carry the sales argument', () => {
   it('spends capacity on scan and hold, and hold buys ground back', () => {
     const g = createGame({ data: DATA, seed: 9, mode: 'timed' });
     g.begin();
+    /* Stage entry tops capacity up by one, so a run with no readiness
+     * cards starts stage one able to afford exactly one scan or three
+     * isolates. That trade is the whole point of the resource. */
+    expect(g.state.capacity).toBe(CAPACITY_START + 1);
+
     g.tick(4000);
     const before = g.state.depth;
     const cap = g.state.capacity;
+
     expect(g.hold()).toBe(true);
-    expect(g.state.capacity).toBe(cap - 1);
+    expect(g.state.capacity).toBe(cap - HOLD_COST);
     expect(before - g.state.depth).toBeCloseTo(HOLD_PUSHBACK, 5);
+
+    const beforeScan = g.state.depth;
     expect(g.scan()).toBe(true);
     expect(g.state.revealed.weak).toBe(true);
-    expect(g.state.capacity).toBe(cap - 2);
+    expect(g.state.capacity).toBe(cap - HOLD_COST - SCAN_COST);
+    /* A scan costs ground as well as capacity, or there is no reason not
+     * to scan every stage. */
+    expect(g.state.depth - beforeScan).toBeCloseTo(SCAN_DEPTH_COST, 5);
     expect(g.scan()).toBe(false);
+  });
+
+  it('does not charge ground for a scan in learn mode, where there is no clock', () => {
+    const g = createGame({ data: DATA, seed: 9, mode: 'learn' });
+    g.begin();
+    const depth = g.state.depth;
+    expect(g.scan()).toBe(true);
+    expect(g.state.depth).toBe(depth);
+  });
+
+  it('reports no weakest phase for a run that held every stage', () => {
+    const s = play((g, slot) => {
+      const v = g.state.variant;
+      const best = PILLARS.find((p) => v.rank[p] === 'best');
+      return slot === 'lead' ? best : rightBackupFor(v, best);
+    });
+    expect(s.gap.key).toBe('clean');
+    expect(s.gap.title).toBe('Nothing got through');
+    /* Still has to produce an opener — the gap is the commercial output
+     * and a perfect run is the one most likely to be shown to someone. */
+    expect(s.gap.opener).toBeTruthy();
+    expect(s.gap.detail).toBeTruthy();
   });
 
   it('breaches a stage the player never answers', () => {
@@ -254,7 +290,7 @@ describe('rules that carry the sales argument', () => {
     expect(r.backup).toBeNull();
   });
 
-  it('honours the readiness cards it advertises', () => {
+  it('honors the readiness cards it advertises', () => {
     /* auto-isolate downgrades the first breach only */
     const g = createGame({ data: DATA, seed: 21, mode: 'learn' });
     g.togglePosture('auto-isolate');

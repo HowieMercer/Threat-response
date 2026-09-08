@@ -51,7 +51,7 @@ const jitter = (base, spread) => base + (Math.random() * 2 - 1) * spread;
  *
  * The first version of this harness ran in learn mode, where the clock
  * does not move, and reported that scanning every stage got a player to
- * Threat Hunter 80% of the time. That number was an artefact: in a real
+ * Threat Hunter 80% of the time. That number was an artifact: in a real
  * run a scan costs ground, reading the card costs seconds, and the stage
  * can end before the second pick lands. Anything measured about pacing has
  * to be measured against a player who takes time to do things.

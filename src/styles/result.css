@@ -1,0 +1,548 @@
+/* The result screen. The artifact a prospect keeps, and the thing booth
+ * staff open a conversation on. Everything here is either the score, the
+ * gap, or a way to take it away with you. */
+
+.result-top {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+@media (max-width: 760px) {
+  .result-top {
+    grid-template-columns: minmax(0, 1fr);
+    text-align: center;
+    gap: 12px;
+  }
+}
+
+/* The dial. One animated number in the whole run, because it is the one
+ * number the run was building toward. */
+.dial {
+  position: relative;
+  width: 232px;
+  height: 232px;
+  margin: 0 auto;
+}
+.dial svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.dial .ring-bg {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 12;
+}
+.dial .ring-fg {
+  fill: none;
+  stroke: var(--tone, var(--brand));
+  stroke-width: 12;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 12px var(--tone, var(--brand)));
+  transition: stroke-dashoffset 1.2s var(--ease-out);
+}
+.dial-mid {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.dial-num {
+  font-family: var(--display);
+  font-size: 62px;
+  line-height: 1;
+  color: var(--tone-b, var(--text));
+}
+.dial-cap {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-top: 6px;
+  text-align: center;
+  /* The hole in the ring is about 130px across. Wider than this and the
+     caption runs under the stroke. */
+  max-width: 116px;
+  line-height: 1.35;
+}
+
+.rank-block h1 {
+  font-size: clamp(28px, 6vw, 46px);
+  line-height: 1.02;
+  margin-bottom: 6px;
+}
+.rank-block .rank-blurb {
+  font-size: 15px;
+  color: var(--dim);
+  margin-bottom: 12px;
+  max-width: 46ch;
+}
+@media (max-width: 760px) {
+  .rank-block .rank-blurb {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+.rank-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+@media (max-width: 760px) {
+  .rank-row {
+    justify-content: center;
+  }
+}
+
+.rank-prog {
+  max-width: 420px;
+}
+.rank-prog .bar {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--line);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.rank-prog .bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), var(--green));
+  transition: width 1s var(--ease-out);
+}
+.rank-prog .note {
+  font-size: 12.5px;
+  color: var(--dim);
+}
+
+/* --------------------------------------------------------- the verdict */
+
+.verdict {
+  padding: 15px 17px;
+  border-radius: var(--r);
+  border: 1px solid var(--tone, var(--line2));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tone, var(--brand)) 11%, transparent), rgba(25, 15, 58, 0.6));
+  margin-bottom: 14px;
+}
+.verdict .v-zone {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tone-b);
+  margin-bottom: 5px;
+}
+.verdict .v-line {
+  font-family: var(--display);
+  font-size: clamp(17px, 3.6vw, 22px);
+  margin-bottom: 9px;
+}
+/* The emotional peak. A business closing after 32 years does more work
+ * than any number, so it gets its own weight and nothing competes with
+ * it on the line. */
+.verdict .v-business {
+  font-size: 15px;
+  color: var(--text);
+  line-height: 1.5;
+  max-width: 62ch;
+}
+.verdict .v-capped {
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--line2);
+  font-size: 12.5px;
+  color: var(--amber-b);
+}
+
+/* ------------------------------------------------------------ the gap */
+
+.gap {
+  padding: 15px 17px;
+  border-radius: var(--r);
+  border: 1px solid var(--brand);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.14), rgba(25, 15, 58, 0.62));
+  margin-bottom: 14px;
+}
+.gap h3 {
+  font-size: clamp(17px, 3.4vw, 21px);
+  margin-bottom: 8px;
+}
+.gap .g-body {
+  font-size: 14px;
+  color: var(--dim);
+  max-width: 68ch;
+  margin-bottom: 10px;
+}
+.gap .g-detail {
+  font-size: 13.5px;
+  color: var(--text);
+  padding: 9px 11px;
+  border-radius: var(--r-sm);
+  background: rgba(12, 8, 32, 0.5);
+  border-left: 2px solid var(--brand-b);
+  margin-bottom: 11px;
+}
+.gap .g-opener {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: 13.5px;
+  color: var(--green-b);
+}
+.gap .g-opener .label {
+  flex: none;
+  padding-top: 2px;
+}
+
+/* --------------------------------------------------------- stage recap */
+
+.recap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.rc {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.024);
+  border-left: 3px solid var(--tone);
+}
+.rc .rc-n {
+  font-family: var(--display);
+  font-size: 17px;
+  color: var(--faint);
+  text-align: center;
+}
+.rc .rc-mid {
+  min-width: 0;
+}
+.rc .rc-tech {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  margin-bottom: 2px;
+}
+.rc .rc-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rc .rc-picks {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--dim);
+  margin-top: 3px;
+}
+.rc .rc-out {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--tone-b);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------- posture recap + map */
+
+.two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.card {
+  padding: 14px 15px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.024);
+}
+.card h3 {
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: var(--dim);
+  margin-bottom: 10px;
+}
+.built {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.built li {
+  list-style: none;
+  font-size: 13px;
+  color: var(--dim);
+  line-height: 1.45;
+  padding-left: 12px;
+  border-left: 2px solid var(--tone);
+}
+.built li b {
+  color: var(--text);
+  display: block;
+  font-weight: 600;
+}
+.built-empty {
+  font-size: 13px;
+  color: var(--amber-b);
+  line-height: 1.5;
+}
+
+.final-estate {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.fe {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+}
+.fe .fe-n {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--dim);
+}
+.fe .fe-s {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.fe.ok { border-color: rgba(51, 230, 174, 0.35); }
+.fe.ok .fe-s { color: var(--green); }
+.fe.degraded { border-color: rgba(255, 178, 62, 0.4); }
+.fe.degraded .fe-s { color: var(--amber); }
+.fe.lost { border-color: rgba(255, 77, 103, 0.45); }
+.fe.lost .fe-s { color: var(--red-b); }
+.fe .fe-loss {
+  display: block;
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: 2px;
+}
+
+/* ------------------------------------------------------ scorecard/lead */
+
+.scorecard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  padding: 15px 17px;
+  border-radius: var(--r);
+  border: 1px solid var(--line2);
+  background: rgba(30, 18, 72, 0.42);
+  margin-bottom: 14px;
+}
+@media (max-width: 700px) {
+  .scorecard {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.qr-box {
+  text-align: center;
+}
+.qr-box svg {
+  display: block;
+  border-radius: 9px;
+  margin: 0 auto 7px;
+}
+.qr-box .qr-cap {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.09em;
+  color: var(--faint);
+}
+.seed-code {
+  font-family: var(--mono);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--green-b);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 11px;
+}
+.field label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.field input[type='text'],
+.field input[type='email'] {
+  font-family: var(--body);
+  font-size: 16px; /* 16px minimum, or iOS zooms the page on focus */
+  color: var(--text);
+  background: rgba(12, 8, 32, 0.6);
+  border: 1px solid var(--line2);
+  border-radius: var(--r-sm);
+  padding: 11px 13px;
+  min-height: var(--tap);
+  width: 100%;
+}
+.field input:focus {
+  border-color: var(--brand);
+}
+.field .err {
+  font-size: 12px;
+  color: var(--red-b);
+  min-height: 16px;
+}
+
+.role-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 11px;
+}
+.role-row button {
+  flex: 1 1 160px;
+  min-height: var(--tap);
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line2);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--dim);
+  font-family: var(--body);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.role-row button[aria-pressed='true'] {
+  border-color: var(--brand-b);
+  color: var(--text);
+  background: rgba(139, 92, 246, 0.16);
+}
+
+.consent {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 12.5px;
+  color: var(--dim);
+  line-height: 1.45;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+.consent input {
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
+  accent-color: var(--brand);
+  flex: none;
+}
+/* The label wraps the input, so the whole block is the hit area — well
+ * over 44px. The box itself is sized for visibility, not for the target. */
+.consent {
+  padding: 6px 0;
+  min-height: var(--tap);
+  align-items: center;
+}
+.consent a {
+  color: var(--brand-b);
+}
+
+.sent {
+  padding: 13px 15px;
+  border-radius: var(--r);
+  border: 1px solid var(--green);
+  background: rgba(12, 51, 39, 0.5);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ---------------------------------------------------------- sticky bar */
+
+.sticky {
+  position: sticky;
+  bottom: 0;
+  margin: 6px calc(-1 * var(--wrap-pad)) calc(-1 * var(--wrap-pad-b));
+  padding: 12px var(--wrap-pad) calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(12, 8, 32, 0), rgba(12, 8, 32, 0.94) 38%);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  z-index: 20;
+}
+.sticky .btn {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+/* Footer text, rendered after the bar rather than inside it. */
+.cta-note {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  color: var(--faint);
+  margin-bottom: 4px;
+}
+@media (max-width: 480px) {
+  /* "Copy incident report" plus "Play again" will not both fit on one
+   * 375px row at the display face's width. Drop the middle word rather
+   * than stacking, which is what made the bar tall enough to cover the
+   * verdict. */
+  .sticky {
+    gap: 8px;
+  }
+  .sticky .btn {
+    flex: 1 1 0;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: 14px;
+  }
+  .sticky .btn .kbd {
+    display: none;
+  }
+}
+
+/* The dial at a fixed 232px is more than half the height of a 375x667
+ * screen before anything else has rendered. */
+@media (max-width: 480px) {
+  .result-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dial {
+    width: 168px;
+    height: 168px;
+  }
+  .dial-num {
+    font-size: 46px;
+  }
+  .dial-cap {
+    font-size: 7.5px;
+    max-width: 88px;
+  }
+}
